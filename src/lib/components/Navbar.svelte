@@ -1,25 +1,25 @@
 <script>
+  // Fix the import
   import { page } from '$app/stores';
-  import { goto } from '$app/navigation';
-
+  
   export let user = null;
+
+  // Define navigation items
+  const navItems = [
+    { name: 'Inicio', path: '/' },
+    { name: 'Avalúos', path: '/avaluos' }
+  ];
+
+  // Function to check if a path is active
+  function isActive(path) {
+    // Use the correct $page store
+    return $page.url.pathname === path;
+  }
 
   function handleLogout() {
     localStorage.removeItem('jwtToken');
     localStorage.removeItem('userData');
-    goto('/login');
-  }
-
-  // Navigation items
-  const navItems = [
-    { name: 'Dashboard', path: '/', icon: 'chart-pie' },
-    { name: 'Avalúos', path: '/avaluos', icon: 'clipboard-list' },
-  ];
-
-  // Check if a nav item is active
-  function isActive(path) {
-    return $page.url.pathname === path || 
-           ($page.url.pathname.startsWith(path) && path !== '/');
+    window.location.href = '/login';
   }
 </script>
 
@@ -29,7 +29,7 @@
       <div class="flex items-center">
         <!-- Logo -->
         <div class="flex-shrink-0 flex items-center">
-          <span class="text-2xl font-bold text-blue-600">AT</span>
+          <img src="/images/logo.png" alt="Avalúos Trochez Logo" class="h-10 w-auto" />
           <span class="ml-2 text-lg font-semibold text-gray-800">Avalúos Trochez</span>
         </div>
         
