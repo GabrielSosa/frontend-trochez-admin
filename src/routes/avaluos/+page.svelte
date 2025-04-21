@@ -291,7 +291,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(avaluo.valor)}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.color}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href={`/avaluos/${avaluo.id}/editar`} class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</a>
+                    <a href={`/avaluos/${avaluo.vehicle_appraisal_id}/editar`} class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</a>
                     <button 
                       on:click={() => openCertificate(avaluo.vehicle_appraisal_id)} 
                       class="text-green-600 hover:text-green-900 bg-transparent border-none p-0 cursor-pointer text-sm font-medium inline-flex items-center"
