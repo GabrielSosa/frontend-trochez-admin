@@ -43,8 +43,8 @@
       
       const data = await apiFetch(ApiUrls.AVALUOS.getAll);
       avaluos = data.map(item => ({
-        id: item.id || Math.floor(Math.random() * 1000),
-        vehicle_appraisal_id: item.id || Math.floor(Math.random() * 1000), // Usar el mismo ID como vehicle_appraisal_id
+        id: item.id,
+        vehicle_appraisal_id: item.vehicle_appraisal_id || item.id, // Use vehicle_appraisal_id if available, otherwise use id
         fecha: item.appraisal_date,
         cliente: item.applicant,
         vehiculo: `${item.brand} ${item.vehicle_description} ${item.model_year}`,
