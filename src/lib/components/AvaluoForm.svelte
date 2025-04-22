@@ -219,6 +219,7 @@
           id="engine_size"
           type="number"
           min="0"
+          step="0.1"
           bind:value={formData.engine_size}
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
