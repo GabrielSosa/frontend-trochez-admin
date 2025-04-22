@@ -7,28 +7,26 @@ import { API_BASE_URL } from './constants';
 export class ApiUrls {
   // URLs de autenticación
   static AUTH = {
-    login: `${API_BASE_URL}/api/security/signin`,
-    register: `${API_BASE_URL}/api/security/signup`,
-    forgotPassword: `${API_BASE_URL}/api/security/forgot-password`,
-    resetPassword: `${API_BASE_URL}/api/security/reset-password`
+    login: `${API_BASE_URL}/api/v1/security/signin`,
+    register: `${API_BASE_URL}/api/v1/security/signup`
   };
 
   // URLs para usuarios
   static USERS = {
-    getAll: `${API_BASE_URL}/api/users`,
-    getById: (id) => `${API_BASE_URL}/api/users/${id}`,
-    create: `${API_BASE_URL}/api/users`,
-    update: (id) => `${API_BASE_URL}/api/users/${id}`,
-    delete: (id) => `${API_BASE_URL}/api/users/${id}`
+    getAll: `${API_BASE_URL}/api/v1/users`,
+    getById: (id) => `${API_BASE_URL}/api/v1/users/${id}`,
+    create: `${API_BASE_URL}/api/v1/users`,
+    update: (id) => `${API_BASE_URL}/api/v1/users/${id}`,
+    delete: (id) => `${API_BASE_URL}/api/v1/users/${id}`
   };
 
   // URLs para avalúos
   static AVALUOS = {
-    getAll: `${API_BASE_URL}/api/appraisals`,
-    getById: (id) => `${API_BASE_URL}/api/appraisals/${id}`,
-    create: `${API_BASE_URL}/api/appraisals`,
-    update: (id) => `${API_BASE_URL}/api/appraisals/${id}`,
-    delete: (id) => `${API_BASE_URL}/api/appraisals/${id}`
+    getAll: `${API_BASE_URL}/api/v1/appraisals`,
+    getById: (id) => `${API_BASE_URL}/api/v1/appraisals/${id}`,
+    create: `${API_BASE_URL}/api/v1/appraisals`,
+    update: (id) => `${API_BASE_URL}/api/v1/appraisals/${id}`,
+    delete: (id) => `${API_BASE_URL}/api/v1/appraisals/${id}`
   };
 
   // URLs para CERTIFICADOS
