@@ -35,8 +35,7 @@
     notes: '',
     validity_days: 30,
     validity_kms: 1000,
-    deduction_description: '', 
-    deduction_amount: 0
+    deductions: [] // Ensure it's an array
   };
 
   onMount(async () => {
@@ -58,7 +57,7 @@
       const data = await apiFetch(ApiUrls.AVALUOS.getById(avaluoId));
       console.log('Datos del avalúo cargados:', data);
       
-      // Map API data to form data, including temporary deduction fields
+      // Map API data to form data
       formData = {
         appraisal_date: data.appraisal_date?.split('T')[0] || '', 
         vehicle_description: data.vehicle_description || '',
@@ -78,8 +77,7 @@
         notes: data.notes || '',
         validity_days: data.validity_days || 30,
         validity_kms: data.validity_kms || 1000,
-        deduction_description: data.deductions?.[0]?.description || '',
-        deduction_amount: data.deductions?.[0]?.amount || 0
+        deductions: data.deductions || [] // Ensure it's an array
       };
       
       // successMessage = 'Datos del avalúo cargados.'; 
@@ -155,20 +153,13 @@
       cleanedFormData.validity_days = Number(cleanedFormData.validity_days) || 30;
       cleanedFormData.validity_kms = Number(cleanedFormData.validity_kms) || 1000;
       
-      // Convert temporary deduction fields back to deductions array
-      if (cleanedFormData.deduction_description || cleanedFormData.deduction_amount) {
-        cleanedFormData.deductions = [
-          {
-            description: cleanedFormData.deduction_description || '',
-            amount: Number(cleanedFormData.deduction_amount || 0)
-          }
-        ];
-      } else {
-        cleanedFormData.deductions = [];
+      // Ensure deductions array amounts are numbers (if they exist)
+      if (cleanedFormData.deductions && Array.isArray(cleanedFormData.deductions)) {
+        cleanedFormData.deductions = cleanedFormData.deductions.map(d => ({
+          ...d,
+          amount: Number(d.amount || 0)
+        }));
       }
-      // Remove temporary fields before sending
-      delete cleanedFormData.deduction_description;
-      delete cleanedFormData.deduction_amount;
 
       console.log('Datos enviados al API (Actualización):', JSON.stringify(cleanedFormData, null, 2));
 
