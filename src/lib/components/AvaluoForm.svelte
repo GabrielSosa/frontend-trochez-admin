@@ -301,7 +301,7 @@
     <h2 class="text-lg font-semibold text-gray-800 mb-4">Valor del Avalúo</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <label for="appraisal_value_local" class="block text-sm font-medium text-gray-700 mb-1">Valor (Lempiras) *</label>
+        <label for="appraisal_value_local" class="block text-sm font-medium text-gray-700 mb-1">Valor (Colones) *</label>
         <input
           id="appraisal_value_local"
           type="number"
