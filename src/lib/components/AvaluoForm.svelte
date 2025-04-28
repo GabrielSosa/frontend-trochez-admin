@@ -8,19 +8,17 @@
   import { createEventDispatcher } from 'svelte';
   const dispatch = createEventDispatcher();
 
-  // Static options (could also be passed as props if needed)
-  const fuelTypes = ['Gasolina', 'Diesel', 'Híbrido', 'Eléctrico', 'Gas'];
-  const marcasVehiculos = [
-    'Toyota', 'Honda', 'Nissan', 'Hyundai', 'Kia', 
-    'Mitsubishi', 'Ford', 'Chevrolet', 'Mazda', 'Suzuki',
-    'BMW', 'Mercedes-Benz', 'Audi', 'Volkswagen', 'Lexus',
-    'Jeep', 'Land Rover', 'Subaru', 'Volvo', 'Porsche'
-  ];
-
   // Initialize deductions if not present
   if (!formData.deductions) {
     formData.deductions = [];
   }
+
+  // Reactive calculation for total deductions
+  $: totalDeductions = formData.deductions.reduce((sum, deduction) => {
+    // Ensure amount is treated as a number, default to 0 if null, undefined or not a number
+    const amount = Number(deduction.amount) || 0; 
+    return sum + amount;
+  }, 0);
 
   function triggerSubmit() {
     dispatch('submit');
@@ -119,18 +117,15 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       <div>
         <label for="brand" class="block text-sm font-medium text-gray-700 mb-1">Marca *</label>
-        <select
+        <input
           id="brand"
+          type="text"
           bind:value={formData.brand}
           required
+          placeholder="Ej: Toyota, Honda..."
           class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           class:border-red-500={validationErrors?.brand}
-        >
-          <option value="">Seleccione una marca</option>
-          {#each marcasVehiculos as marca}
-            <option value={marca}>{marca}</option>
-          {/each}
-        </select>
+        />
         {#if validationErrors?.brand}
           <p class="text-red-500 text-xs mt-1">{validationErrors.brand}</p>
         {/if}
@@ -218,15 +213,13 @@
       </div>
       <div>
         <label for="fuel_type" class="block text-sm font-medium text-gray-700 mb-1">Tipo Combustible</label>
-        <select
+        <input
           id="fuel_type"
+          type="text"
           bind:value={formData.fuel_type}
+          placeholder="Ej: Gasolina, Diesel..."
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          {#each fuelTypes as type}
-            <option value={type}>{type}</option>
-          {/each}
-        </select>
+        />
       </div>
       <div>
         <label for="engine_size" class="block text-sm font-medium text-gray-700 mb-1">Tamaño Motor (cc)</label>
@@ -278,18 +271,28 @@
           </div>
         {/each}
       </div>
+
+      <!-- Display Total Deductions -->
+      <div class="mt-4 pt-4 border-t border-gray-200">
+        <p class="text-md font-semibold text-gray-700 text-right">
+          Total Deducciones: 
+          <span class="text-red-600">
+            Lps. {totalDeductions.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+        </p>
+      </div>
     {/if}
 
     {#if formData.deductions.length < 5}
       <button 
         type="button" 
         on:click={addDeduction} 
-        class="mt-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+        class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
       >
         Agregar Deducción
       </button>
     {:else}
-       <p class="text-sm text-gray-500 mt-2">Máximo de 5 deducciones alcanzado.</p>
+       <p class="text-sm text-gray-500 mt-4">Máximo de 5 deducciones alcanzado.</p>
     {/if}
   </div>
 
