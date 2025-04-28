@@ -123,11 +123,11 @@
       }
       
       // More detailed client-side validation
-      if (formData.vin && formData.vin.length > 20) {
-        validationErrors.vin = 'El VIN no debe exceder 20 caracteres';
+      if (formData.vin && formData.vin.length > 17) {
+        validationErrors.vin = 'El VIN no debe exceder 17 caracteres';
       }
-      if (formData.engine_number && formData.engine_number.length > 20) {
-        validationErrors.engine_number = 'El número de motor no debe exceder 20 caracteres';
+      if (formData.engine_number && formData.engine_number.length > 17) {
+        validationErrors.engine_number = 'El número de motor no debe exceder 17 caracteres';
       }
        if (formData.appraisal_value_local && formData.appraisal_value_local <= 0) {
          validationErrors.appraisal_value_local = 'El valor local debe ser mayor que cero.';

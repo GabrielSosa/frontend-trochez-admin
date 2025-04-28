@@ -197,7 +197,7 @@
        <div class="md:col-span-1">
         <label for="vin" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">VIN</label>
         <input
-          id="vin" type="text" maxlength="20" bind:value={formData.vin} placeholder="VIN"
+          id="vin" type="text" maxlength="17" bind:value={formData.vin} placeholder="VIN"
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.vin}
         />
@@ -206,7 +206,7 @@
        <div class="md:col-span-1">
         <label for="engine_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Motor</label>
         <input
-          id="engine_number" type="text" maxlength="20" bind:value={formData.engine_number} placeholder="MOTOR #"
+          id="engine_number" type="text" maxlength="17" bind:value={formData.engine_number} placeholder="MOTOR #"
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.engine_number}
         />
