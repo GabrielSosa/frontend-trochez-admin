@@ -24,7 +24,7 @@
     applicant: '',
     owner: '',
     appraisal_value_usd: 0,
-    appraisal_value_local: 0,
+    appraisal_value_trochez: 0, 
     vin: '',
     engine_number: '',
     notes: '',
@@ -63,19 +63,24 @@
     validationErrors = {}; 
 
     try {
-      if (!formData.applicant || !formData.brand || !formData.vehicle_description || !formData.appraisal_value_local) {
+      // Update validation check
+      if (!formData.applicant || !formData.brand || !formData.vehicle_description || !formData.appraisal_value_trochez) {
          validationErrors = {
            applicant: !formData.applicant ? 'El solicitante es obligatorio.' : '',
            brand: !formData.brand ? 'La marca es obligatoria.' : '',
            vehicle_description: !formData.vehicle_description ? 'La descripción es obligatoria.' : '',
-           appraisal_value_local: !formData.appraisal_value_local ? 'El valor local es obligatorio.' : '',
+           // Update validation field name
+           appraisal_value_trochez: !formData.appraisal_value_trochez ? 'El valor local es obligatorio.' : '',
          };
-         validationErrors = Object.fromEntries(Object.entries(validationErrors).filter(([_, v]) => v !== ''));
-         if (Object.keys(validationErrors).length > 0) {
-            throw new Error('Por favor complete los campos obligatorios.');
+         // Add specific check for value > 0
+         if (formData.appraisal_value_trochez !== undefined && formData.appraisal_value_trochez <= 0) {
+            validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
          }
+         throw new Error('Por favor complete los campos obligatorios y corrija los errores.');
+      } else if (formData.appraisal_value_trochez <= 0) { // Check separately if other fields are filled
+         validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
       }
-      
+
       if (formData.vin && formData.vin.length > 20) {
         validationErrors.vin = 'El VIN no debe exceder 20 caracteres';
       }
@@ -103,7 +108,8 @@
       cleanedFormData.mileage = Number(cleanedFormData.mileage) || 0;
       cleanedFormData.engine_size = Number(cleanedFormData.engine_size) || null;
       cleanedFormData.appraisal_value_usd = Number(cleanedFormData.appraisal_value_usd) || 0;
-      cleanedFormData.appraisal_value_local = Number(cleanedFormData.appraisal_value_local);
+      // Update field name for cleaning/conversion
+      cleanedFormData.appraisal_value_trochez = Number(cleanedFormData.appraisal_value_trochez); 
       cleanedFormData.validity_days = Number(cleanedFormData.validity_days) || 30;
       cleanedFormData.validity_kms = Number(cleanedFormData.validity_kms) || 1000;
 

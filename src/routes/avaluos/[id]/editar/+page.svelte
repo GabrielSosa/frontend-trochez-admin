@@ -73,7 +73,7 @@
         applicant: data.applicant || '',
         owner: data.owner || '',
         appraisal_value_usd: data.appraisal_value_usd || 0,
-        appraisal_value_local: data.appraisal_value_local || 0,
+        appraisal_value_trochez: data.appraisal_value_trochez || 0, 
         vin: data.vin || '',
         engine_number: data.engine_number || '',
         notes: data.notes || '',
@@ -131,6 +131,29 @@
       }
        if (formData.appraisal_value_local && formData.appraisal_value_local <= 0) {
          validationErrors.appraisal_value_local = 'El valor local debe ser mayor que cero.';
+      }
+      
+      // Basic required field check (update field name)
+      if (!formData.applicant || !formData.brand || !formData.vehicle_description || !formData.appraisal_value_trochez) {
+         validationErrors = {
+           applicant: !formData.applicant ? 'El solicitante es obligatorio.' : '',
+           brand: !formData.brand ? 'La marca es obligatoria.' : '',
+           vehicle_description: !formData.vehicle_description ? 'La descripción es obligatoria.' : '',
+           // Update validation field name
+           appraisal_value_trochez: !formData.appraisal_value_trochez ? 'El valor local es obligatorio.' : '',
+         };
+         // Add specific check for value > 0
+         if (formData.appraisal_value_trochez !== undefined && formData.appraisal_value_trochez <= 0) {
+            validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
+         }
+         // Don't throw error immediately, let other validations run
+      } else if (formData.appraisal_value_trochez <= 0) { // Check separately if other fields are filled
+         validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
+      }
+      
+      // More detailed client-side validation
+      if (formData.appraisal_value_trochez && formData.appraisal_value_trochez <= 0) {
+         validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
       }
       
       if (Object.keys(validationErrors).length > 0) {

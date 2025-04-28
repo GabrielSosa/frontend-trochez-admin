@@ -49,7 +49,7 @@
         cliente: item.applicant,
         vehiculo: `${item.brand} ${item.vehicle_description} ${item.model_year}`,
         placa: item.plate_number,
-        valor: item.appraisal_value_local,
+        valor: item.appraisal_value_trochez, 
         color: item.color,
         kilometraje: item.mileage,
         combustible: item.fuel_type,

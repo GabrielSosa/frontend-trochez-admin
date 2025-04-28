@@ -12,6 +12,13 @@
   if (!formData.deductions) {
     formData.deductions = [];
   }
+  // Ensure apprasail_value_bank exists, initialize if not (though ideally done in parent)
+  if (formData.apprasail_value_bank === undefined) {
+      formData.apprasail_value_bank = 0; 
+  }
+
+  // State for modal visibility
+  let isValueModalOpen = false;
 
   // Reactive calculation for total deductions
   $: totalDeductions = formData.deductions.reduce((sum, deduction) => {
@@ -36,6 +43,15 @@
 
   function removeDeduction(index) {
     formData.deductions = formData.deductions.filter((_, i) => i !== index);
+  }
+
+  function openValueModal() {
+    isValueModalOpen = true;
+  }
+
+  function closeValueModal() {
+    isValueModalOpen = false;
+    // Optionally trigger validation or recalculation if needed after modal close
   }
 </script>
 
@@ -316,19 +332,32 @@
     <h2 class="text-lg font-semibold text-gray-800 mb-4">Valor del Avalúo</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <label for="appraisal_value_local" class="block text-sm font-medium text-gray-700 mb-1">Valor (Colones) *</label>
-        <input
-          id="appraisal_value_local"
-          type="number"
-          min="0.01"
-          step="0.01"
-          bind:value={formData.appraisal_value_local}
-          required
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          class:border-red-500={validationErrors?.appraisal_value_local}
-        />
-         {#if validationErrors?.appraisal_value_local}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.appraisal_value_local}</p>
+        <label for="appraisal_value_trochez" class="block text-sm font-medium text-gray-700 mb-1">Valor (Colones) *</label>
+        <div class="flex items-center space-x-2"> 
+          <input
+            id="appraisal_value_trochez"
+            type="number"
+            min="0.01"
+            step="0.01"
+            bind:value={formData.appraisal_value_trochez}
+            required
+            class="flex-grow w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class:border-red-500={validationErrors?.appraisal_value_trochez}
+          />
+          <button 
+            type="button" 
+            on:click={openValueModal}
+            class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm"
+            title="Detalles del Valor"
+          >
+            <!-- Simple icon or text for the button -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        </div>
+         {#if validationErrors?.appraisal_value_trochez}
+          <p class="text-red-500 text-xs mt-1">{validationErrors.appraisal_value_trochez}</p>
         {/if}
       </div>
       <div>
@@ -372,3 +401,69 @@
     </button>
   </div>
 </form>
+
+<!-- Value Details Modal -->
+{#if isValueModalOpen}
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y-no-static-element-interactions -->
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" on:click|self={closeValueModal}>
+    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+      <h3 class="text-lg font-semibold mb-4">Detalles del Valor</h3>
+      
+      <div class="space-y-4">
+        <div>
+          <label for="modal_appraisal_value_trochez" class="block text-sm font-medium text-gray-700 mb-1">Valor Avaluo Trochez *</label>
+          <input
+            id="modal_appraisal_value_trochez"
+            type="number"
+            min="0.01"
+            step="0.01"
+            bind:value={formData.appraisal_value_trochez}
+            required
+            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class:border-red-500={validationErrors?.appraisal_value_trochez}
+          />
+          {#if validationErrors?.appraisal_value_trochez}
+            <p class="text-red-500 text-xs mt-1">{validationErrors.appraisal_value_trochez}</p>
+          {/if}
+        </div>
+        
+        <div>
+          <label for="modal_apprasail_value_bank" class="block text-sm font-medium text-gray-700 mb-1">Valor Bancario</label>
+          <input
+            id="modal_apprasail_value_bank"
+            type="number"
+            min="0"
+            step="0.01"
+            bind:value={formData.apprasail_value_bank}
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class:border-red-500={validationErrors?.apprasail_value_bank} 
+          />
+           {#if validationErrors?.apprasail_value_bank} /* Add validation if needed */
+            <p class="text-red-500 text-xs mt-1">{validationErrors.apprasail_value_bank}</p>
+          {/if}
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end space-x-3">
+        <button 
+          type="button" 
+          on:click={closeValueModal}
+          class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+        >
+          Cerrar
+        </button>
+        <!-- Optional: Add a specific save button if needed, otherwise closing is enough due to binding -->
+        <!-- 
+        <button 
+          type="button" 
+          on:click={closeValueModal} // Or a specific save function
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+        >
+          Guardar Cambios
+        </button> 
+        -->
+      </div>
+    </div>
+  </div>
+{/if}
