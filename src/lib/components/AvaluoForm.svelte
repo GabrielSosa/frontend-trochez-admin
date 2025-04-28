@@ -22,10 +22,12 @@
 
   // Reactive calculation for total deductions
   $: totalDeductions = formData.deductions.reduce((sum, deduction) => {
-    // Ensure amount is treated as a number, default to 0 if null, undefined or not a number
     const amount = Number(deduction.amount) || 0; 
     return sum + amount;
   }, 0);
+
+  // Add reactive calculation for the 92% display value
+  $: displayValueTrochez92 = (Number(formData.appraisal_value_trochez) || 0) * 0.92;
 
   function triggerSubmit() {
     dispatch('submit');
@@ -332,34 +334,46 @@
     <h2 class="text-lg font-semibold text-gray-800 mb-4">Valor del Avalúo</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <label for="appraisal_value_trochez" class="block text-sm font-medium text-gray-700 mb-1">Valor (Colones) *</label>
+        <!-- Label remains the same, but points to nothing interactive now, consider adjusting -->
+        <label class="block text-sm font-medium text-gray-700 mb-1">Valor (Colones) (92%)</label> 
         <div class="flex items-center space-x-2"> 
-          <input
-            id="appraisal_value_trochez"
-            type="number"
-            min="0.01"
-            step="0.01"
-            bind:value={formData.appraisal_value_trochez}
-            required
-            class="flex-grow w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            class:border-red-500={validationErrors?.appraisal_value_trochez}
-          />
+          <!-- Replace input with a styled div -->
+          <div
+            class="flex-grow w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 cursor-not-allowed"
+          >
+             ₡ {displayValueTrochez92.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
           <button 
             type="button" 
             on:click={openValueModal}
             class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm"
-            title="Detalles del Valor"
+            title="Establecer Valor Original"
           >
-            <!-- Simple icon or text for the button -->
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
           </button>
         </div>
+         <!-- Keep validation message for the original value if needed, though it's set in modal -->
          {#if validationErrors?.appraisal_value_trochez}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.appraisal_value_trochez}</p>
+          <p class="text-red-500 text-xs mt-1">Error en Valor Avaluo Trochez (ver detalles)</p> 
         {/if}
+
+        <!-- REMOVE the Valor Mínimo Costo display field -->
+        <!-- 
+        <div class="mt-2">
+          <label for="apprasail_value_lower_cost_display" class="block text-sm font-medium text-gray-700 mb-1">Valor Mínimo Costo</label>
+          <div 
+            id="apprasail_value_lower_cost_display"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 cursor-not-allowed"
+          >
+            ₡ {formData.apprasail_value_lower_cost.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <input type="hidden" bind:value={formData.apprasail_value_lower_cost} />
+        </div> 
+        -->
       </div>
+      
       <div>
         <label for="appraisal_value_usd" class="block text-sm font-medium text-gray-700 mb-1">Valor (Dólares)</label>
         <input
@@ -368,7 +382,7 @@
           min="0"
           step="0.01"
           bind:value={formData.appraisal_value_usd}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full p-3 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm" 
         />
       </div>
     </div>
