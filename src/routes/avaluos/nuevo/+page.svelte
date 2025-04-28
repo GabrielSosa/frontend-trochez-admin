@@ -18,7 +18,7 @@
     model_year: new Date().getFullYear(),
     color: '',
     mileage: 0,
-    fuel_type: 'Gasolina',
+    fuel_type: 'GAS',
     engine_size: 0,
     plate_number: '',
     applicant: '',
@@ -30,9 +30,10 @@
     notes: '',
     validity_days: 30,
     validity_kms: 1000,
-    deduction_description: '', 
-    deduction_amount: 0,
-    deductions: [] 
+    // Remove these unused fields:
+    // deduction_description: '', 
+    // deduction_amount: 0,
+    deductions: [] // Keep this for the form component
   };
 
   onMount(async () => {
@@ -46,7 +47,6 @@
     }
     
     const token = localStorage.getItem('jwtToken');
-    console.log('Token en nuevo avalúo page:', token ? 'Existe' : 'No existe');
     if (token) {
       console.log('Token value:', token.substring(0, 20) + '...');
     } else {
@@ -95,7 +95,10 @@
         throw new Error('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
       }
 
-      const cleanedFormData = { ...formData };
+      // Start with a copy of the formData which already includes the deductions array
+      const cleanedFormData = { ...formData }; 
+      
+      // Clean up other fields as before
       cleanedFormData.model_year = Number(cleanedFormData.model_year) || null;
       cleanedFormData.mileage = Number(cleanedFormData.mileage) || 0;
       cleanedFormData.engine_size = Number(cleanedFormData.engine_size) || null;
@@ -104,6 +107,16 @@
       cleanedFormData.validity_days = Number(cleanedFormData.validity_days) || 30;
       cleanedFormData.validity_kms = Number(cleanedFormData.validity_kms) || 1000;
 
+      // Ensure deduction amounts are numbers and filter out empty ones if needed
+      cleanedFormData.deductions = cleanedFormData.deductions
+        .map(deduction => ({
+          description: deduction.description || '',
+          amount: Number(deduction.amount) || 0 // Ensure amount is a number, default to 0
+        }))
+        .filter(deduction => deduction.description || deduction.amount > 0); // Optional: remove deductions with no description and zero amount
+
+      // REMOVE THE OLD LOGIC THAT OVERWROTE THE DEDUCTIONS ARRAY:
+      /*
       if (cleanedFormData.deduction_description || cleanedFormData.deduction_amount) {
         cleanedFormData.deductions = [
           {
@@ -116,6 +129,7 @@
       }
       delete cleanedFormData.deduction_description;
       delete cleanedFormData.deduction_amount;
+      */
 
       console.log('Datos enviados al API (Nuevo):', JSON.stringify(cleanedFormData, null, 2));
 

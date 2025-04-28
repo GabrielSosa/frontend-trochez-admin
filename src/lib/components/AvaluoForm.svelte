@@ -40,58 +40,93 @@
 </script>
 
 <form on:submit|preventDefault={triggerSubmit} class="bg-white rounded-lg shadow overflow-hidden">
-  <!-- Fecha del Avalúo -->
+  <!-- New Header Section based on Image -->
   <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Fecha del Avalúo</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div>
-        <label for="appraisal_date" class="block text-sm font-medium text-gray-700 mb-1">Fecha *</label>
-        <input
-          id="appraisal_date"
-          type="date"
-          bind:value={formData.appraisal_date}
-          required
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          class:border-red-500={validationErrors?.appraisal_date}
-        />
-        {#if validationErrors?.appraisal_date}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.appraisal_date}</p>
-        {/if}
+    <div class="flex justify-between items-start gap-6 mb-4"> 
+      
+      <!-- Left Column: Appraisal Number (Static) -->
+      <div class="w-1/4"> 
+        <label for="appraisal_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Avalúo</label>
+        <p class="w-full p-1 border-b border-gray-400 text-sm font-semibold"> 
+          {formData.appraisal_number || 'N/A'} 
+        </p>
       </div>
+
+      <!-- Right Column: Date (Editable), Location (Static), Phone (Static), Number (Static) in a Box -->
+      <div class="w-1/3"> 
+        <div class="border border-gray-300 rounded-md p-2 space-y-1 text-right"> 
+          <div>
+            <input
+              id="appraisal_date"
+              type="date"
+              bind:value={formData.appraisal_date}
+              required
+              class="focus:outline-none text-lg text-right" 
+              class:border-red-500={validationErrors?.appraisal_date} 
+              class:border-b={!validationErrors?.appraisal_date} 
+              class:border-gray-400={!validationErrors?.appraisal_date} 
+            />
+            {#if validationErrors?.appraisal_date}
+              <p class="text-red-500 text-xs mt-1 text-right">{validationErrors.appraisal_date}</p>
+            {/if}
+          </div>
+          <div>
+            <label for="location" class="block w-full text-sm text-right uppercase"> 
+              SAN JOSE C.R 
+            </label>
+          </div>
+          <div>
+            <label for="phone" class="block w-full text-sm text-right">
+              Tel. 8794-4104
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Validity Fields (Moved below the new header) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 pt-4 border-t border-gray-100"> 
       <div>
-        <label for="validity_days" class="block text-sm font-medium text-gray-700 mb-1">Validez (días)</label>
+        <label for="validity_days" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Validez (días)</label> 
         <input
           id="validity_days"
           type="number"
           min="1"
           bind:value={formData.validity_days}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="DÍAS" 
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" 
         />
       </div>
       <div>
-        <label for="validity_kms" class="block text-sm font-medium text-gray-700 mb-1">Validez (kilómetros)</label>
+        <label for="validity_kms" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Validez (kilómetros)</label>
         <input
           id="validity_kms"
           type="number"
           min="1"
           bind:value={formData.validity_kms}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="KM" 
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" 
         />
       </div>
+       <div class="md:col-span-1"> 
+         &nbsp;
+       </div>
     </div>
   </div>
   
   <!-- Información del cliente -->
   <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Información del Cliente</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+ 
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Información del Cliente</h2> 
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"> 
       <div>
+        <label for="applicant" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Solicitante *</label> 
         <input
           id="applicant"
           type="text"
           bind:value={formData.applicant}
           required
-          placeholder="SOLICITANTE *"
+          placeholder="SOLICITANTE" 
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.applicant}
         />
@@ -100,10 +135,11 @@
         {/if}
       </div>
       <div>
+        <label for="owner" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Propietario</label> 
         <input
           id="owner"
           type="text"
-          placeholder="PROPIETARIO *"
+          placeholder="PROPIETARIO" 
           bind:value={formData.owner}
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
         />
@@ -201,7 +237,6 @@
       </div>
       
       <div class="md:col-span-4"> 
-        <label for="notes" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Notas Adicionales</label> 
         <textarea
           id="notes"
           rows="2" 
@@ -309,21 +344,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Notas -->
-  <!-- REMOVE THIS ENTIRE SECTION (Original lines 307-316) -->
-  <!-- 
-  <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Notas Adicionales</h2>
-    <textarea
-      id="notes"
-      rows="4"
-      bind:value={formData.notes}
-      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-      placeholder="Añade cualquier observación relevante aquí..."
-    ></textarea>
-  </div>
-   -->
 
   <!-- Botones de Acción -->
   <div class="p-6 bg-gray-50 flex justify-end items-center space-x-4">

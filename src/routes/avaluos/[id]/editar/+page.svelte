@@ -59,6 +59,8 @@
       
       // Map API data to form data
       formData = {
+        // Add this line to map the ID/Number
+        appraisal_number: data.id || data.appraisal_number || avaluoId, // Use data.id, data.appraisal_number, or fallback to avaluoId from URL
         appraisal_date: data.appraisal_date?.split('T')[0] || '', 
         vehicle_description: data.vehicle_description || '',
         brand: data.brand || '',
