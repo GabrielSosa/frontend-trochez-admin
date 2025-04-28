@@ -26,10 +26,26 @@
     return sum + amount;
   }, 0);
 
-  // Add reactive calculation for the 92% display value
-  $: displayValueTrochez92 = (Number(formData.appraisal_value_trochez) || 0) * 0.92;
+  // Ensure apprasail_value_lower_cost exists, initialize if not (though ideally done in parent)
+  if (formData.apprasail_value_lower_cost === undefined) {
+      formData.apprasail_value_lower_cost = 0; 
+  }
 
+  // Ensure apprasail_value_lower_bank exists, initialize if not (though ideally done in parent)
+  if (formData.apprasail_value_lower_bank === undefined) {
+      formData.apprasail_value_lower_bank = 0; 
+  }
+
+  // Update: Subtract totalDeductions from the 92% value
+  $: apprasail_value_lower_cost = (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions;
+
+  // New: Subtract totalDeductions from apprasail_value_bank
+  $: apprasail_value_lower_bank = (Number(formData.apprasail_value_bank) || 0) - totalDeductions;
+
+  // Update apprasail_value_lower_cost and apprasail_value_lower_bank before submit
   function triggerSubmit() {
+    formData.apprasail_value_lower_cost = apprasail_value_lower_cost;
+    formData.apprasail_value_lower_bank = apprasail_value_lower_bank;
     dispatch('submit');
   }
 
@@ -53,7 +69,6 @@
 
   function closeValueModal() {
     isValueModalOpen = false;
-    // Optionally trigger validation or recalculation if needed after modal close
   }
 </script>
 
@@ -329,60 +344,48 @@
     {/if}
   </div>
 
-  <!-- Valor del Avalúo -->
   <div class="p-6 border-b border-gray-200">
     <h2 class="text-lg font-semibold text-gray-800 mb-4">Valor del Avalúo</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="flex items-center mb-4">
+      <button 
+        type="button" 
+        on:click={openValueModal}
+        class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm"
+        title="Establecer Valor Original"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      </button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">     
+      <!-- Valor Garantía Bancaria -->
       <div>
-        <!-- Label remains the same, but points to nothing interactive now, consider adjusting -->
-        <label class="block text-sm font-medium text-gray-700 mb-1">Valor (Colones) (92%)</label> 
-        <div class="flex items-center space-x-2"> 
-          <!-- Replace input with a styled div -->
-          <div
-            class="flex-grow w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 cursor-not-allowed"
-          >
-             ₡ {displayValueTrochez92.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <button 
-            type="button" 
-            on:click={openValueModal}
-            class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm"
-            title="Establecer Valor Original"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-          </button>
+        <label for="apprasail_value_lower_bank" class="block text-xs font-medium text-gray-700 mb-1">Valor Garantía Bancaria</label>
+        <div class="w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 text-lg font-semibold text-center cursor-not-allowed">
+          ₡ {apprasail_value_lower_bank.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
-         <!-- Keep validation message for the original value if needed, though it's set in modal -->
-         {#if validationErrors?.appraisal_value_trochez}
+      </div>
+      <!-- Valor Avalúo -->
+      <div>
+        <label for="apprasail_value_lower_cost" class="block text-xs font-medium text-gray-700 mb-1">Valor Avalúo</label>
+        <div class="w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 text-lg font-semibold text-center cursor-not-allowed">
+          ₡ {apprasail_value_lower_cost.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </div>
+        {#if validationErrors?.appraisal_value_trochez}
           <p class="text-red-500 text-xs mt-1">Error en Valor Avaluo Trochez (ver detalles)</p> 
         {/if}
-
-        <!-- REMOVE the Valor Mínimo Costo display field -->
-        <!-- 
-        <div class="mt-2">
-          <label for="apprasail_value_lower_cost_display" class="block text-sm font-medium text-gray-700 mb-1">Valor Mínimo Costo</label>
-          <div 
-            id="apprasail_value_lower_cost_display"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 cursor-not-allowed"
-          >
-            ₡ {formData.apprasail_value_lower_cost.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-          <input type="hidden" bind:value={formData.apprasail_value_lower_cost} />
-        </div> 
-        -->
       </div>
-      
+      <!-- Valor Dólares -->
       <div>
-        <label for="appraisal_value_usd" class="block text-sm font-medium text-gray-700 mb-1">Valor (Dólares)</label>
+        <label for="appraisal_value_usd" class="block text-xs font-medium text-gray-700 mb-1">Valor (Dólares)</label>
         <input
           id="appraisal_value_usd"
           type="number"
           min="0"
           step="0.01"
           bind:value={formData.appraisal_value_usd}
-          class="w-full p-3 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm" 
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold text-center"
         />
       </div>
     </div>
@@ -467,16 +470,6 @@
         >
           Cerrar
         </button>
-        <!-- Optional: Add a specific save button if needed, otherwise closing is enough due to binding -->
-        <!-- 
-        <button 
-          type="button" 
-          on:click={closeValueModal} // Or a specific save function
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        >
-          Guardar Cambios
-        </button> 
-        -->
       </div>
     </div>
   </div>
