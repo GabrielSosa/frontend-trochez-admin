@@ -86,13 +86,13 @@
     <h2 class="text-lg font-semibold text-gray-800 mb-4">Información del Cliente</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <label for="applicant" class="block text-sm font-medium text-gray-700 mb-1">Solicitante *</label>
         <input
           id="applicant"
           type="text"
           bind:value={formData.applicant}
           required
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="SOLICITANTE *"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.applicant}
         />
         {#if validationErrors?.applicant}
@@ -100,12 +100,12 @@
         {/if}
       </div>
       <div>
-        <label for="owner" class="block text-sm font-medium text-gray-700 mb-1">Propietario</label>
         <input
           id="owner"
           type="text"
+          placeholder="PROPIETARIO *"
           bind:value={formData.owner}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
         />
       </div>
     </div>
@@ -113,125 +113,104 @@
 
   <!-- Información del vehículo -->
   <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Información del Vehículo</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div>
-        <label for="brand" class="block text-sm font-medium text-gray-700 mb-1">Marca *</label>
+    <h2 class="text-lg font-semibold text-gray-800 mb-4 uppercase">Información del Vehículo</h2>
+    <!-- Adjusted grid for denser layout, aiming for 5 columns on medium screens -->
+    <div class="grid grid-cols-1 md:grid-cols-5 gap-x-6 gap-y-4">
+      <!-- Row 1: Brand, Model/Desc (spans 2 cols), Year, Color -->
+      <div class="md:col-span-1">
+        <label for="brand" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Marca *</label>
         <input
-          id="brand"
-          type="text"
-          bind:value={formData.brand}
-          required
-          placeholder="Ej: Toyota, Honda..."
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="brand" type="text" bind:value={formData.brand} required placeholder="MARCA"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.brand}
         />
-        {#if validationErrors?.brand}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.brand}</p>
-        {/if}
+        {#if validationErrors?.brand} <p class="text-red-500 text-xs mt-1">{validationErrors.brand}</p> {/if}
       </div>
-      <div>
-        <label for="vehicle_description" class="block text-sm font-medium text-gray-700 mb-1">Descripción/Modelo *</label>
+      <div class="md:col-span-2"> <!-- Description spans 2 columns -->
+        <label for="vehicle_description" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Descripción/Modelo *</label>
         <input
-          id="vehicle_description"
-          type="text"
-          bind:value={formData.vehicle_description}
-          required
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="vehicle_description" type="text" bind:value={formData.vehicle_description} required placeholder="MODELO"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.vehicle_description}
         />
-        {#if validationErrors?.vehicle_description}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.vehicle_description}</p>
-        {/if}
+        {#if validationErrors?.vehicle_description} <p class="text-red-500 text-xs mt-1">{validationErrors.vehicle_description}</p> {/if}
       </div>
-      <div>
-        <label for="model_year" class="block text-sm font-medium text-gray-700 mb-1">Año</label>
+      <div class="md:col-span-1">
+        <label for="model_year" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Año</label>
         <input
-          id="model_year"
-          type="number"
-          min="1900"
-          max={new Date().getFullYear() + 1}
-          bind:value={formData.model_year}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="model_year" type="number" min="1900" max={new Date().getFullYear() + 1} bind:value={formData.model_year} placeholder="AÑO"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
         />
       </div>
-      <div>
-        <label for="color" class="block text-sm font-medium text-gray-700 mb-1">Color</label>
+       <div class="md:col-span-1">
+        <label for="color" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Color</label>
         <input
-          id="color"
-          type="text"
-          bind:value={formData.color}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="color" type="text" bind:value={formData.color} placeholder="COLOR"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
         />
       </div>
-      <div>
-        <label for="plate_number" class="block text-sm font-medium text-gray-700 mb-1">Placa</label>
+
+      <!-- Row 2: Plate, VIN, Engine No, Mileage, Fuel -->
+       <div class="md:col-span-1">
+        <label for="plate_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Placa</label>
         <input
-          id="plate_number"
-          type="text"
-          bind:value={formData.plate_number}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="plate_number" type="text" bind:value={formData.plate_number} placeholder="PLACA"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
         />
       </div>
-       <div>
-        <label for="vin" class="block text-sm font-medium text-gray-700 mb-1">VIN</label>
+       <div class="md:col-span-1">
+        <label for="vin" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">VIN</label>
         <input
-          id="vin"
-          type="text"
-          maxlength="20"
-          bind:value={formData.vin}
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="vin" type="text" maxlength="20" bind:value={formData.vin} placeholder="VIN"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.vin}
         />
-        {#if validationErrors?.vin}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.vin}</p>
-        {/if}
+        {#if validationErrors?.vin} <p class="text-red-500 text-xs mt-1">{validationErrors.vin}</p> {/if}
       </div>
-       <div>
-        <label for="engine_number" class="block text-sm font-medium text-gray-700 mb-1">No. Motor</label>
+       <div class="md:col-span-1">
+        <label for="engine_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Motor</label>
         <input
-          id="engine_number"
-          type="text"
-          maxlength="20"
-          bind:value={formData.engine_number}
-          class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="engine_number" type="text" maxlength="20" bind:value={formData.engine_number} placeholder="MOTOR #"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.engine_number}
         />
-        {#if validationErrors?.engine_number}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number}</p>
-        {/if}
+        {#if validationErrors?.engine_number} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number}</p> {/if}
       </div>
-      <div>
-        <label for="mileage" class="block text-sm font-medium text-gray-700 mb-1">Kilometraje</label>
+      <div class="md:col-span-1">
+        <label for="mileage" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Kilometraje</label>
         <input
-          id="mileage"
-          type="number"
-          min="0"
-          bind:value={formData.mileage}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="mileage" type="number" min="0" bind:value={formData.mileage} placeholder="KM"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
         />
       </div>
-      <div>
-        <label for="fuel_type" class="block text-sm font-medium text-gray-700 mb-1">Tipo Combustible</label>
+      <div class="md:col-span-1">
+        <label for="fuel_type" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Combustible</label>
         <input
-          id="fuel_type"
-          type="text"
-          bind:value={formData.fuel_type}
-          placeholder="Ej: Gasolina, Diesel..."
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="fuel_type" type="text" bind:value={formData.fuel_type} placeholder="COMB."
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
         />
       </div>
-      <div>
-        <label for="engine_size" class="block text-sm font-medium text-gray-700 mb-1">Tamaño Motor (cc)</label>
+
+      <!-- Row 3: Engine Size and Notes -->
+      <div class="md:col-span-1"> 
+        <label for="engine_size" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Cilindraje (cc)</label>
         <input
-          id="engine_size"
-          type="number"
-          min="0"
-          step="0.1"
-          bind:value={formData.engine_size}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="engine_size" type="number" min="0" step="0.1" bind:value={formData.engine_size} placeholder="CC"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
         />
       </div>
+      
+      <div class="md:col-span-4"> 
+        <label for="notes" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Notas Adicionales</label> 
+        <textarea
+          id="notes"
+          rows="2" 
+          bind:value={formData.notes}
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" 
+          placeholder="OBSERVACIONES..." 
+        ></textarea>
+      </div>
+
     </div>
   </div>
 
@@ -247,7 +226,7 @@
                 type="text"
                 placeholder="Descripción Deducción #{index + 1}"
                 bind:value={deduction.description}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
               />
               <input
                 type="number"
@@ -255,7 +234,7 @@
                 min="0" 
                 step="0.01"
                 bind:value={deduction.amount}
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm" 
               />
             </div>
             <button 
@@ -264,6 +243,7 @@
               class="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out"
               aria-label="Eliminar deducción"
             >
+              <!-- SVG icon -->
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
@@ -277,7 +257,7 @@
         <p class="text-md font-semibold text-gray-700 text-right">
           Total Deducciones: 
           <span class="text-red-600">
-            Lps. {totalDeductions.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            ₡ {totalDeductions.toLocaleString('es-HN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
         </p>
       </div>
@@ -331,6 +311,8 @@
   </div>
 
   <!-- Notas -->
+  <!-- REMOVE THIS ENTIRE SECTION (Original lines 307-316) -->
+  <!-- 
   <div class="p-6 border-b border-gray-200">
     <h2 class="text-lg font-semibold text-gray-800 mb-4">Notas Adicionales</h2>
     <textarea
@@ -341,6 +323,7 @@
       placeholder="Añade cualquier observación relevante aquí..."
     ></textarea>
   </div>
+   -->
 
   <!-- Botones de Acción -->
   <div class="p-6 bg-gray-50 flex justify-end items-center space-x-4">
