@@ -77,6 +77,7 @@
         vin: data.vin || '',
         engine_number: data.engine_number || '',
         notes: data.notes || '',
+        extras: data.extras || '',
         validity_days: data.validity_days || 30,
         validity_kms: data.validity_kms || 1000,
         deductions: data.deductions || [] // Ensure it's an array

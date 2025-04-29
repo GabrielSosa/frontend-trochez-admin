@@ -61,6 +61,7 @@
         notas: item.notes,
         validezDias: item.validity_days,
         validezKms: item.validity_kms,
+        extras: item.extras,
         deduccion: item.deductions
       }));
       filteredAvaluos = [...avaluos];

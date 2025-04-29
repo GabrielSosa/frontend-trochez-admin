@@ -16,6 +16,10 @@
   if (formData.apprasail_value_bank === undefined) {
       formData.apprasail_value_bank = 0; 
   }
+  // Ensure extras exists, initialize if not
+  if (formData.extras === undefined) {
+      formData.extras = ''; 
+  }
 
   // State for modal visibility
   let isValueModalOpen = false;
@@ -36,11 +40,9 @@
       formData.apprasail_value_lower_bank = 0; 
   }
 
-  // Update: Subtract totalDeductions from the 92% value
-  $: apprasail_value_lower_cost = (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions;
+  $: apprasail_value_lower_cost = Math.max(0, (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions);
 
-  // New: Subtract totalDeductions from apprasail_value_bank
-  $: apprasail_value_lower_bank = (Number(formData.apprasail_value_bank) || 0) - totalDeductions;
+  $: apprasail_value_lower_bank = Math.max(0, (Number(formData.apprasail_value_bank) || 0) - totalDeductions);
 
   // Update apprasail_value_lower_cost and apprasail_value_lower_bank before submit
   function triggerSubmit() {
@@ -260,7 +262,7 @@
         />
       </div>
 
-      <!-- Row 3: Engine Size and Notes -->
+      <!-- Row 3: Engine Size, Extras -->
       <div class="md:col-span-1"> 
         <label for="engine_size" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Cilindraje (cc)</label>
         <input
@@ -269,12 +271,27 @@
         />
       </div>
       
+      <!-- Updated Extras Field (spans remaining 4 columns) -->
       <div class="md:col-span-4"> 
+        <label for="extras" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Extras</label>
+        <input
+          id="extras"
+          type="text" 
+          bind:value={formData.extras}
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase" 
+          placeholder="EXTRAS" 
+        />
+      </div>
+      <!-- Removed the empty placeholder div that was here -->
+
+      <!-- Row 4: Notes (Full Width) -->
+      <div class="md:col-span-5"> 
+        <label for="notes" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Observaciones</label>
         <textarea
           id="notes"
           rows="2" 
           bind:value={formData.notes}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" 
+          class="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" 
           placeholder="OBSERVACIONES..." 
         ></textarea>
       </div>

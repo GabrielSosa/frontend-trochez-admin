@@ -28,6 +28,7 @@
     vin: '',
     engine_number: '',
     notes: '',
+    extras: '', 
     validity_days: 30,
     validity_kms: 1000,
     // Remove these unused fields:
