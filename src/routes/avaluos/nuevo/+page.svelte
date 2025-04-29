@@ -25,6 +25,7 @@
     owner: '',
     appraisal_value_usd: 0,
     appraisal_value_trochez: 0, 
+    apprasail_value_bank: 0, // Add initialization for bank value
     vin: '',
     engine_number: '',
     notes: '',
@@ -96,21 +97,25 @@
          throw new Error('Por favor corrija los errores de validación.');
       }
 
+      // Prepare data for API
       const token = localStorage.getItem('jwtToken');
       if (!token) {
         throw new Error('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
       }
 
       // Start with a copy of the formData which already includes the deductions array
+      // and the calculated lower_cost/lower_bank values from the form component
       const cleanedFormData = { ...formData }; 
       
-      // Clean up other fields as before
+      // Clean up fields
       cleanedFormData.model_year = Number(cleanedFormData.model_year) || null;
       cleanedFormData.mileage = Number(cleanedFormData.mileage) || 0;
       cleanedFormData.engine_size = Number(cleanedFormData.engine_size) || null;
       cleanedFormData.appraisal_value_usd = Number(cleanedFormData.appraisal_value_usd) || 0;
-      // Update field name for cleaning/conversion
-      cleanedFormData.appraisal_value_trochez = Number(cleanedFormData.appraisal_value_trochez); 
+      cleanedFormData.appraisal_value_trochez = Number(cleanedFormData.appraisal_value_trochez) || 0; // Ensure number
+      cleanedFormData.apprasail_value_bank = Number(cleanedFormData.apprasail_value_bank) || 0; // Clean bank value
+      cleanedFormData.apprasail_value_lower_cost = Number(cleanedFormData.apprasail_value_lower_cost) || 0; // Clean lower cost
+      cleanedFormData.apprasail_value_lower_bank = Number(cleanedFormData.apprasail_value_lower_bank) || 0; // Clean lower bank
       cleanedFormData.validity_days = Number(cleanedFormData.validity_days) || 30;
       cleanedFormData.validity_kms = Number(cleanedFormData.validity_kms) || 1000;
 
