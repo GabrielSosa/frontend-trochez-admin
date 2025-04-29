@@ -58,12 +58,14 @@
         appraisal_value_trochez: data.appraisal_value_trochez || 0, 
         apprasail_value_bank: data.apprasail_value_bank || 0, 
         vin: data.vin || '',
+        vin_card: data.vin_card || '', 
         engine_number: data.engine_number || '',
+        engine_number_card: data.engine_number_card || '', 
         notes: data.notes || '',
         extras: data.extras || '',
-        validity_days: data.validity_days || 30, // Fallback to 30
-        validity_kms: data.validity_kms || 1000, // Fallback to 1000
-        deductions: data.deductions || [] // Fallback to empty array
+        validity_days: data.validity_days || 30, 
+        validity_kms: data.validity_kms || 1000,
+        deductions: data.deductions || [] 
       };
       
     } catch (error) {

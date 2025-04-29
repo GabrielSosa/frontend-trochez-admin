@@ -198,6 +198,9 @@
         />
         {#if validationErrors?.vehicle_description} <p class="text-red-500 text-xs mt-1">{validationErrors.vehicle_description}</p> {/if}
       </div>
+      
+      <div class="md:col-span-1"></div> 
+
       <div class="md:col-span-1">
         <label for="model_year" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Año</label>
         <input
@@ -213,7 +216,6 @@
         />
       </div>
 
-      <!-- Row 2: Plate, VIN, Engine No, Mileage, Fuel -->
        <div class="md:col-span-1">
         <label for="plate_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Placa</label>
         <input
@@ -221,24 +223,7 @@
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
         />
       </div>
-       <div class="md:col-span-1">
-        <label for="vin" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">VIN</label>
-        <input
-          id="vin" type="text" maxlength="17" bind:value={formData.vin} placeholder="VIN"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
-          class:border-red-500={validationErrors?.vin}
-        />
-        {#if validationErrors?.vin} <p class="text-red-500 text-xs mt-1">{validationErrors.vin}</p> {/if}
-      </div>
-       <div class="md:col-span-1">
-        <label for="engine_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Motor</label>
-        <input
-          id="engine_number" type="text" maxlength="17" bind:value={formData.engine_number} placeholder="MOTOR #"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
-          class:border-red-500={validationErrors?.engine_number}
-        />
-        {#if validationErrors?.engine_number} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number}</p> {/if}
-      </div>
+
       <div class="md:col-span-1">
         <label for="mileage" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Kilometraje</label>
         <input
@@ -262,7 +247,9 @@
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
         />
       </div>
-      
+
+ 
+ 
       <!-- Updated Extras Field (spans remaining 4 columns) -->
       <div class="md:col-span-4"> 
         <label for="extras" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Extras</label>
@@ -283,11 +270,57 @@
           id="notes"
           rows="2" 
           bind:value={formData.notes}
-          class="w-full p-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" 
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase" 
           placeholder="OBSERVACIONES..." 
         ></textarea>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Verificación de Números -->
+  <div class="p-6 border-b border-gray-200">
+    <h2 class="text-lg font-semibold text-gray-800 mb-4 uppercase">Verificación de Números</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+      <div>
+        <label for="vin" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">VIN (Físico)</label>
+        <input
+          id="vin" type="text" maxlength="17" bind:value={formData.vin} placeholder="VIN FÍSICO"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class:border-red-500={validationErrors?.vin}
+        />
+        {#if validationErrors?.vin} <p class="text-red-500 text-xs mt-1">{validationErrors.vin}</p> {/if}
+      </div>
+
+      <div>
+        <label for="vin_card" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Numero de VIN en Tarjeta</label>
+        <input
+          id="vin_card" type="text" maxlength="17" bind:value={formData.vin_card} placeholder="VIN TARJETA"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class:border-red-500={validationErrors?.vin_card} 
+        />
+        {#if validationErrors?.vin_card} <p class="text-red-500 text-xs mt-1">{validationErrors.vin_card}</p> {/if} 
+      </div>
+
+      <div>
+        <label for="engine_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Motor (Físico)</label>
+        <input
+          id="engine_number" type="text" maxlength="17" bind:value={formData.engine_number} placeholder="MOTOR FÍSICO #"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class:border-red-500={validationErrors?.engine_number}
+        />
+        {#if validationErrors?.engine_number} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number}</p> {/if}
+      </div>
+
+      <div>
+        <label for="engine_number_card" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Numero de Motor en Tarjeta</label>
+        <input
+          id="engine_number_card" type="text" maxlength="17" bind:value={formData.engine_number_card} placeholder="MOTOR TARJETA #"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class:border-red-500={validationErrors?.engine_number_card} 
+        />
+        {#if validationErrors?.engine_number_card} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number_card}</p> {/if}
+      </div>
     </div>
   </div>
 

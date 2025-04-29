@@ -30,8 +30,14 @@ export function validateAvaluoFormData(formData) {
   if (formData.engine_number && formData.engine_number.length > 17) {
     errors.engine_number = 'El número de motor no debe exceder 17 caracteres';
   }
+  
+  if (formData.vin_card && formData.vin_card.length > 17) {
+    errors.vin_card = 'El VIN (Tarjeta) no debe exceder 17 caracteres';
+  }
+  if (formData.engine_number_card && formData.engine_number_card.length > 17) {
+    errors.engine_number_card = 'El número de motor (Tarjeta) no debe exceder 17 caracteres';
+  }
 
-  // Add other common validations here if needed
 
   return errors;
 }
@@ -97,12 +103,13 @@ export function getDefaultAvaluoFormData() {
     appraisal_value_trochez: 0,
     apprasail_value_bank: 0,
     vin: '',
+    vin_card: '', 
     engine_number: '',
+    engine_number_card: '',
     notes: '',
     extras: '',
     validity_days: 30,
     validity_kms: 1000,
     deductions: []
-    // Add appraisal_number: null or similar if you want it defined initially everywhere
   };
 }
