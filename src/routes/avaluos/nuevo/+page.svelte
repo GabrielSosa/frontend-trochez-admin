@@ -4,6 +4,8 @@
   import Navbar from '$lib/components/Navbar.svelte';
   import AvaluoForm from '$lib/components/AvaluoForm.svelte'; 
   import { ApiUrls, apiFetch } from '$lib/api';
+  // Import the utility functions
+  import { validateAvaluoFormData, cleanAvaluoFormData, getDefaultAvaluoFormData } from '$lib/utils/avaluoUtils.js';
 
   let user = null;
   let isSubmitting = false;
@@ -11,32 +13,9 @@
   let errorMessage = '';
   let validationErrors = {}; 
 
-  let formData = {
-    appraisal_date: new Date().toISOString().split('T')[0], 
-    vehicle_description: '',
-    brand: '',
-    model_year: new Date().getFullYear(),
-    color: '',
-    mileage: 0,
-    fuel_type: 'GAS',
-    engine_size: 0,
-    plate_number: '',
-    applicant: '',
-    owner: '',
-    appraisal_value_usd: 0,
-    appraisal_value_trochez: 0, 
-    apprasail_value_bank: 0, // Add initialization for bank value
-    vin: '',
-    engine_number: '',
-    notes: '',
-    extras: '', 
-    validity_days: 30,
-    validity_kms: 1000,
-    // Remove these unused fields:
-    // deduction_description: '', 
-    // deduction_amount: 0,
-    deductions: [] // Keep this for the form component
-  };
+  // Use the default structure and override the date
+  let formData = getDefaultAvaluoFormData();
+  formData.appraisal_date = new Date().toISOString().split('T')[0]; // Set default date for new appraisals
 
   onMount(async () => {
     const userData = localStorage.getItem('userData');
@@ -62,40 +41,21 @@
     isSubmitting = true;
     errorMessage = '';
     successMessage = '';
-    validationErrors = {}; 
+    validationErrors = {}; // Reset errors
 
     try {
-      // Update validation check
-      if (!formData.applicant || !formData.brand || !formData.vehicle_description || !formData.appraisal_value_trochez) {
-         validationErrors = {
-           applicant: !formData.applicant ? 'El solicitante es obligatorio.' : '',
-           brand: !formData.brand ? 'La marca es obligatoria.' : '',
-           vehicle_description: !formData.vehicle_description ? 'La descripción es obligatoria.' : '',
-           // Update validation field name
-           appraisal_value_trochez: !formData.appraisal_value_trochez ? 'El valor local es obligatorio.' : '',
-         };
-         // Add specific check for value > 0
-         if (formData.appraisal_value_trochez !== undefined && formData.appraisal_value_trochez <= 0) {
-            validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
-         }
-         throw new Error('Por favor complete los campos obligatorios y corrija los errores.');
-      } else if (formData.appraisal_value_trochez <= 0) { // Check separately if other fields are filled
-         validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
-      }
-
-      if (formData.vin && formData.vin.length > 20) {
-        validationErrors.vin = 'El VIN no debe exceder 20 caracteres';
-      }
-      if (formData.engine_number && formData.engine_number.length > 20) {
-        validationErrors.engine_number = 'El número de motor no debe exceder 20 caracteres';
-      }
-      if (formData.appraisal_value_local && formData.appraisal_value_local <= 0) {
-         validationErrors.appraisal_value_local = 'El valor local debe ser mayor que cero.';
-      }
+      // --- Use Shared Validation ---
+      validationErrors = validateAvaluoFormData(formData); 
       
       if (Object.keys(validationErrors).length > 0) {
-         throw new Error('Por favor corrija los errores de validación.');
+         // Filter out empty messages just in case (though validateAvaluoFormData shouldn't produce them)
+         validationErrors = Object.fromEntries(Object.entries(validationErrors).filter(([_, v]) => v));
+         if (Object.keys(validationErrors).length > 0) {
+            throw new Error('Por favor corrija los errores de validación.');
+         }
       }
+      // --- End Shared Validation ---
+
 
       // Prepare data for API
       const token = localStorage.getItem('jwtToken');
@@ -103,45 +63,9 @@
         throw new Error('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
       }
 
-      // Start with a copy of the formData which already includes the deductions array
-      // and the calculated lower_cost/lower_bank values from the form component
-      const cleanedFormData = { ...formData }; 
-      
-      // Clean up fields
-      cleanedFormData.model_year = Number(cleanedFormData.model_year) || null;
-      cleanedFormData.mileage = Number(cleanedFormData.mileage) || 0;
-      cleanedFormData.engine_size = Number(cleanedFormData.engine_size) || null;
-      cleanedFormData.appraisal_value_usd = Number(cleanedFormData.appraisal_value_usd) || 0;
-      cleanedFormData.appraisal_value_trochez = Number(cleanedFormData.appraisal_value_trochez) || 0; // Ensure number
-      cleanedFormData.apprasail_value_bank = Number(cleanedFormData.apprasail_value_bank) || 0; // Clean bank value
-      cleanedFormData.apprasail_value_lower_cost = Number(cleanedFormData.apprasail_value_lower_cost) || 0; // Clean lower cost
-      cleanedFormData.apprasail_value_lower_bank = Number(cleanedFormData.apprasail_value_lower_bank) || 0; // Clean lower bank
-      cleanedFormData.validity_days = Number(cleanedFormData.validity_days) || 30;
-      cleanedFormData.validity_kms = Number(cleanedFormData.validity_kms) || 1000;
-
-      // Ensure deduction amounts are numbers and filter out empty ones if needed
-      cleanedFormData.deductions = cleanedFormData.deductions
-        .map(deduction => ({
-          description: deduction.description || '',
-          amount: Number(deduction.amount) || 0 // Ensure amount is a number, default to 0
-        }))
-        .filter(deduction => deduction.description || deduction.amount > 0); // Optional: remove deductions with no description and zero amount
-
-      // REMOVE THE OLD LOGIC THAT OVERWROTE THE DEDUCTIONS ARRAY:
-      /*
-      if (cleanedFormData.deduction_description || cleanedFormData.deduction_amount) {
-        cleanedFormData.deductions = [
-          {
-            description: cleanedFormData.deduction_description || '',
-            amount: Number(cleanedFormData.deduction_amount || 0)
-          }
-        ];
-      } else {
-        cleanedFormData.deductions = [];
-      }
-      delete cleanedFormData.deduction_description;
-      delete cleanedFormData.deduction_amount;
-      */
+      // --- Use Shared Cleaning ---
+      const cleanedFormData = cleanAvaluoFormData(formData);
+      // --- End Shared Cleaning ---
 
       console.log('Datos enviados al API (Nuevo):', JSON.stringify(cleanedFormData, null, 2));
 
@@ -163,11 +87,13 @@
           setTimeout(() => goto('/login'), 2000);
           errorMessage = 'Sesión expirada. Por favor inicie sesión nuevamente.';
         } else if (apiError.status === 422 && apiError.data?.detail) {
-           errorMessage = 'Error de validación. Por favor revise los campos.';
-           validationErrors = {}; 
+           // Handle backend validation errors (these might differ from frontend checks)
+           errorMessage = 'Error de validación del servidor. Por favor revise los campos.';
+           validationErrors = {}; // Reset frontend errors, show backend ones
            apiError.data.detail.forEach(error => {
              const fieldName = error.loc[error.loc.length - 1]; 
              if (fieldName) {
+               // Prioritize backend error messages if available for a field
                validationErrors[fieldName] = error.msg; 
              }
            });
@@ -178,7 +104,7 @@
       
     } catch (error) {
       console.error('Error submitting form:', error);
-      if (!errorMessage) { 
+      if (!errorMessage) { // Only set generic message if no specific API or validation error was set
          errorMessage = error.message || 'Ha ocurrido un error al guardar el avalúo.';
       }
     } finally {

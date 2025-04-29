@@ -5,6 +5,8 @@
   import Navbar from '$lib/components/Navbar.svelte';
   import AvaluoForm from '$lib/components/AvaluoForm.svelte'; 
   import { ApiUrls, apiFetch } from '$lib/api';
+  // Import the new function along with the others
+  import { validateAvaluoFormData, cleanAvaluoFormData, getDefaultAvaluoFormData } from '$lib/utils/avaluoUtils.js';
 
   // Get the ID from the URL
   let avaluoId = $page.params.id;
@@ -15,31 +17,8 @@
   let errorMessage = '';
   let validationErrors = {}; 
 
-  // Initial form data structure (will be populated by fetched data)
-  let formData = {
-    appraisal_date: '', 
-    vehicle_description: '',
-    brand: '',
-    model_year: new Date().getFullYear(),
-    color: '',
-    mileage: 0,
-    fuel_type: 'GAS', // Consider if 'GAS' is the default like in nuevo
-    engine_size: 0,
-    plate_number: '',
-    applicant: '',
-    owner: '',
-    appraisal_value_usd: 0,
-    // Update initial field name and add extras
-    appraisal_value_trochez: 0, 
-    apprasail_value_bank: 0, 
-    vin: '',
-    engine_number: '',
-    notes: '',
-    extras: '', // Initialize extras
-    validity_days: 30,
-    validity_kms: 1000,
-    deductions: [] // Ensure it's an array
-  };
+  // Use the default structure. Values will be replaced in onMount.
+  let formData = getDefaultAvaluoFormData();
 
   onMount(async () => {
     // Get user data
@@ -60,31 +39,31 @@
       const data = await apiFetch(ApiUrls.AVALUOS.getById(avaluoId));
       console.log('Datos del avalúo cargados:', data);
       
-      // Map API data to form data (This part seems correct already)
+      // Map API data to form data - This overwrites the defaults
       formData = {
+        // Keep existing mapping logic which handles defaults/fallbacks correctly
         appraisal_number: data.id || data.appraisal_number || avaluoId, 
-        appraisal_date: data.appraisal_date?.split('T')[0] || '', 
+        appraisal_date: data.appraisal_date?.split('T')[0] || '', // Fallback to empty if not present
         vehicle_description: data.vehicle_description || '',
         brand: data.brand || '',
-        model_year: data.model_year || new Date().getFullYear(),
+        model_year: data.model_year || new Date().getFullYear(), // Fallback to current year
         color: data.color || '',
         mileage: data.mileage || 0,
-        fuel_type: data.fuel_type || 'Gasolina',
+        fuel_type: data.fuel_type || 'GAS', // Fallback to GAS
         engine_size: data.engine_size || 0,
         plate_number: data.plate_number || '',
         applicant: data.applicant || '',
         owner: data.owner || '',
         appraisal_value_usd: data.appraisal_value_usd || 0,
         appraisal_value_trochez: data.appraisal_value_trochez || 0, 
-        apprasail_value_bank: data.apprasail_value_bank || 0, // Map apprasail_value_bank
-        // The lower_cost and lower_bank values will be recalculated by the form component based on the loaded trochez/bank values and deductions
+        apprasail_value_bank: data.apprasail_value_bank || 0, 
         vin: data.vin || '',
         engine_number: data.engine_number || '',
         notes: data.notes || '',
         extras: data.extras || '',
-        validity_days: data.validity_days || 30,
-        validity_kms: data.validity_kms || 1000,
-        deductions: data.deductions || [] 
+        validity_days: data.validity_days || 30, // Fallback to 30
+        validity_kms: data.validity_kms || 1000, // Fallback to 1000
+        deductions: data.deductions || [] // Fallback to empty array
       };
       
     } catch (error) {
@@ -108,53 +87,20 @@
     isSubmitting = true;
     errorMessage = '';
     successMessage = '';
-    validationErrors = {}; 
+    validationErrors = {}; // Reset errors
 
     try {
-      // --- Start Validation Updates ---
+      // --- Use Shared Validation ---
+      validationErrors = validateAvaluoFormData(formData); 
       
-      // Consolidate required field checks using appraisal_value_trochez
-      if (!formData.applicant || !formData.brand || !formData.vehicle_description || !formData.appraisal_value_trochez) {
-         validationErrors = {
-           applicant: !formData.applicant ? 'El solicitante es obligatorio.' : '',
-           brand: !formData.brand ? 'La marca es obligatoria.' : '',
-           vehicle_description: !formData.vehicle_description ? 'La descripción es obligatoria.' : '',
-           appraisal_value_trochez: !formData.appraisal_value_trochez ? 'El valor local es obligatorio.' : '',
-         };
-         // Add specific check for value > 0 only if the field was initially present
-         if (formData.appraisal_value_trochez !== undefined && formData.appraisal_value_trochez <= 0) {
-            validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
-         }
-         // Remove empty error messages before checking if we need to throw
-         validationErrors = Object.fromEntries(Object.entries(validationErrors).filter(([_, v]) => v !== ''));
-         if (Object.keys(validationErrors).length > 0) {
-             // Throw error only if required fields are missing or invalid
-             throw new Error('Por favor complete los campos obligatorios y corrija los errores.');
-         }
-      } else if (formData.appraisal_value_trochez <= 0) { // Check separately if other fields are filled but value is invalid
-         validationErrors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
-      }
-
-      // Update VIN/Engine length checks (using 20 like in nuevo/+page.svelte for consistency)
-      if (formData.vin && formData.vin.length > 20) { // Changed from 17 to 20
-        validationErrors.vin = 'El VIN no debe exceder 20 caracteres';
-      }
-      if (formData.engine_number && formData.engine_number.length > 20) { // Changed from 17 to 20
-        validationErrors.engine_number = 'El número de motor no debe exceder 20 caracteres';
-      }
-      
-      // Remove redundant check for appraisal_value_local <= 0
-      // if (formData.appraisal_value_local && formData.appraisal_value_local <= 0) { ... }
-
-      // --- End Validation Updates ---
-
       if (Object.keys(validationErrors).length > 0) {
-         // Filter out any potentially empty error messages again before throwing
-         validationErrors = Object.fromEntries(Object.entries(validationErrors).filter(([_, v]) => v !== ''));
+         // Filter out empty messages just in case
+         validationErrors = Object.fromEntries(Object.entries(validationErrors).filter(([_, v]) => v));
          if (Object.keys(validationErrors).length > 0) {
             throw new Error('Por favor corrija los errores de validación.');
          }
       }
+      // --- End Shared Validation ---
 
       // Prepare data for API
       const token = localStorage.getItem('jwtToken');
@@ -162,33 +108,9 @@
         throw new Error('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
       }
 
-      // Create a cleaned version of the form data for submission
-      // The formData bound from AvaluoForm already includes the calculated lower_cost and lower_bank values
-      const cleanedFormData = { ...formData }; 
-      
-      // Ensure numeric fields are numbers
-      cleanedFormData.model_year = Number(cleanedFormData.model_year) || null;
-      cleanedFormData.mileage = Number(cleanedFormData.mileage) || 0;
-      cleanedFormData.engine_size = Number(cleanedFormData.engine_size) || null;
-      cleanedFormData.appraisal_value_usd = Number(cleanedFormData.appraisal_value_usd) || 0;
-      cleanedFormData.appraisal_value_trochez = Number(cleanedFormData.appraisal_value_trochez) || 0; // Ensure it's a number
-      cleanedFormData.apprasail_value_bank = Number(cleanedFormData.apprasail_value_bank) || 0; // Clean apprasail_value_bank
-      cleanedFormData.apprasail_value_lower_cost = Number(cleanedFormData.apprasail_value_lower_cost) || 0; // Clean apprasail_value_lower_cost
-      cleanedFormData.apprasail_value_lower_bank = Number(cleanedFormData.apprasail_value_lower_bank) || 0; // Clean apprasail_value_lower_bank
-      cleanedFormData.validity_days = Number(cleanedFormData.validity_days) || 30;
-      cleanedFormData.validity_kms = Number(cleanedFormData.validity_kms) || 1000;
-      
-      // Ensure deductions array amounts are numbers (if they exist)
-      if (cleanedFormData.deductions && Array.isArray(cleanedFormData.deductions)) {
-        cleanedFormData.deductions = cleanedFormData.deductions
-          .map(d => ({
-            description: d.description || '', // Ensure description exists
-            amount: Number(d.amount || 0)     // Ensure amount is number
-          }))
-          .filter(d => d.description || d.amount > 0); // Optional: Filter empty deductions
-      } else {
-          cleanedFormData.deductions = []; // Ensure it's an empty array if null/undefined
-      }
+      // --- Use Shared Cleaning ---
+      const cleanedFormData = cleanAvaluoFormData(formData);
+      // --- End Shared Cleaning ---
 
       console.log('Datos enviados al API (Actualización):', JSON.stringify(cleanedFormData, null, 2));
 
@@ -211,8 +133,9 @@
           setTimeout(() => goto('/login'), 2000);
           errorMessage = 'Sesión expirada. Por favor inicie sesión nuevamente.';
         } else if (apiError.status === 422 && apiError.data?.detail) {
-           errorMessage = 'Error de validación. Por favor revise los campos.';
-           validationErrors = {}; 
+           // Handle backend validation errors
+           errorMessage = 'Error de validación del servidor. Por favor revise los campos.';
+           validationErrors = {}; // Reset frontend errors, show backend ones
            apiError.data.detail.forEach(error => {
              const fieldName = error.loc[error.loc.length - 1];
              if (fieldName) {
@@ -226,7 +149,7 @@
 
     } catch (error) {
       console.error('Error submitting form:', error);
-      if (!errorMessage) { 
+      if (!errorMessage) { // Only set generic message if no specific API or validation error was set
           errorMessage = error.message || 'Ha ocurrido un error al actualizar el avalúo.';
       }
     } finally {

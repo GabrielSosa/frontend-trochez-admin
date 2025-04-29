@@ -30,25 +30,17 @@
     return sum + amount;
   }, 0);
 
-  // Ensure apprasail_value_lower_cost exists, initialize if not (though ideally done in parent)
-  if (formData.apprasail_value_lower_cost === undefined) {
-      formData.apprasail_value_lower_cost = 0; 
-  }
-
-  // Ensure apprasail_value_lower_bank exists, initialize if not (though ideally done in parent)
-  if (formData.apprasail_value_lower_bank === undefined) {
-      formData.apprasail_value_lower_bank = 0; 
-  }
-
+  // Reactive calculation for lower cost value
   $: apprasail_value_lower_cost = Math.max(0, (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions);
 
+  // Reactive calculation for lower bank value
   $: apprasail_value_lower_bank = Math.max(0, (Number(formData.apprasail_value_bank) || 0) - totalDeductions);
 
   // Update apprasail_value_lower_cost and apprasail_value_lower_bank before submit
   function triggerSubmit() {
-    formData.apprasail_value_lower_cost = apprasail_value_lower_cost;
-    formData.apprasail_value_lower_bank = apprasail_value_lower_bank;
-    dispatch('submit');
+    formData.apprasail_value_lower_cost = apprasail_value_lower_cost; // Assign calculated value back to bound formData
+    formData.apprasail_value_lower_bank = apprasail_value_lower_bank; // Assign calculated value back to bound formData
+    dispatch('submit'); // Dispatch event AFTER updating formData
   }
 
   function triggerCancel() {
@@ -277,7 +269,7 @@
         <input
           id="extras"
           type="text" 
-          bind:value={formData.extras}
+          bind:value={formData.extras} 
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase" 
           placeholder="EXTRAS" 
         />
