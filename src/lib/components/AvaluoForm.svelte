@@ -143,32 +143,35 @@
   
   <!-- Información del cliente -->
   <div class="p-6 border-b border-gray-200">
- 
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Información del Cliente</h2> 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"> 
+    <h2 class="text-lg font-semibold text-gray-800 mb-4">Información del Cliente</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
       <div>
-        <label for="applicant" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Solicitante *</label> 
+        <label for="applicant" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Solicitante *</label>
         <input
           id="applicant"
           type="text"
           bind:value={formData.applicant}
           required
-          placeholder="SOLICITANTE" 
+          placeholder="SOLICITANTE"
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.applicant}
+          spellcheck="true"
+          lang="es"
         />
         {#if validationErrors?.applicant}
           <p class="text-red-500 text-xs mt-1">{validationErrors.applicant}</p>
         {/if}
       </div>
       <div>
-        <label for="owner" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Propietario</label> 
+        <label for="owner" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Propietario</label>
         <input
           id="owner"
           type="text"
-          placeholder="PROPIETARIO" 
+          placeholder="PROPIETARIO"
           bind:value={formData.owner}
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          spellcheck="true"
+          lang="es"
         />
       </div>
     </div>
@@ -177,7 +180,6 @@
   <!-- Información del vehículo -->
   <div class="p-6 border-b border-gray-200">
     <h2 class="text-lg font-semibold text-gray-800 mb-4 uppercase">Información del Vehículo</h2>
-    <!-- Adjusted grid for denser layout, aiming for 5 columns on medium screens -->
     <div class="grid grid-cols-1 md:grid-cols-5 gap-x-6 gap-y-4">
       <!-- Row 1: Brand, Model/Desc (spans 2 cols), Year, Color -->
       <div class="md:col-span-1">
@@ -186,6 +188,8 @@
           id="brand" type="text" bind:value={formData.brand} required placeholder="MARCA"
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.brand}
+          spellcheck="true"
+          lang="es"
         />
         {#if validationErrors?.brand} <p class="text-red-500 text-xs mt-1">{validationErrors.brand}</p> {/if}
       </div>
@@ -195,10 +199,12 @@
           id="vehicle_description" type="text" bind:value={formData.vehicle_description} required placeholder="MODELO"
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
           class:border-red-500={validationErrors?.vehicle_description}
+          spellcheck="true"
+          lang="es"
         />
         {#if validationErrors?.vehicle_description} <p class="text-red-500 text-xs mt-1">{validationErrors.vehicle_description}</p> {/if}
       </div>
-      
+
       <div class="md:col-span-1"></div> 
 
       <div class="md:col-span-1">
@@ -213,6 +219,8 @@
         <input
           id="color" type="text" bind:value={formData.color} placeholder="COLOR"
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          spellcheck="true"
+          lang="es"
         />
       </div>
 
@@ -236,6 +244,8 @@
         <input
           id="fuel_type" type="text" bind:value={formData.fuel_type} placeholder="COMB."
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          spellcheck="true"
+          lang="es"
         />
       </div>
 
@@ -251,27 +261,35 @@
  
  
       <!-- Updated Extras Field (spans remaining 4 columns) -->
-      <div class="md:col-span-4"> 
+      <div class="md:col-span-4">
         <label for="extras" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Extras</label>
         <input
           id="extras"
-          type="text" 
-          bind:value={formData.extras} 
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase" 
-          placeholder="EXTRAS" 
+          type="text"
+          bind:value={formData.extras}
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase"
+          placeholder="EXTRAS"
+          spellcheck="true"
+          autocorrect="on"
+          autocomplete="on"
+          lang="es"
         />
       </div>
       <!-- Removed the empty placeholder div that was here -->
 
       <!-- Row 4: Notes (Full Width) -->
-      <div class="md:col-span-5"> 
+      <div class="md:col-span-5">
         <label for="notes" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Observaciones</label>
         <textarea
           id="notes"
-          rows="2" 
+          rows="2"
           bind:value={formData.notes}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase" 
-          placeholder="OBSERVACIONES..." 
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase"
+          placeholder="OBSERVACIONES..."
+          spellcheck="true"
+          autocorrect="on"
+          autocomplete="on"
+          lang="es"
         ></textarea>
       </div>
 
@@ -337,14 +355,16 @@
                 placeholder="Descripción Deducción #{index + 1}"
                 bind:value={deduction.description}
                 class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+                spellcheck="true"
+                lang="es"
               />
               <input
                 type="number"
                 placeholder="Monto Deducción #{index + 1}"
-                min="0" 
+                min="0"
                 step="0.01"
                 bind:value={deduction.amount}
-                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm" 
+                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
               />
             </div>
             <button 
