@@ -153,7 +153,7 @@
           bind:value={formData.applicant}
           required
           placeholder="SOLICITANTE"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           class:border-red-500={validationErrors?.applicant}
           spellcheck="true"
           lang="es"
@@ -169,7 +169,7 @@
           type="text"
           placeholder="PROPIETARIO"
           bind:value={formData.owner}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           spellcheck="true"
           lang="es"
         />
@@ -186,18 +186,18 @@
         <label for="brand" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Marca *</label>
         <input
           id="brand" type="text" bind:value={formData.brand} required placeholder="MARCA"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           class:border-red-500={validationErrors?.brand}
           spellcheck="true"
           lang="es"
         />
         {#if validationErrors?.brand} <p class="text-red-500 text-xs mt-1">{validationErrors.brand}</p> {/if}
       </div>
-      <div class="md:col-span-2"> <!-- Description spans 2 columns -->
+      <div class="md:col-span-2">
         <label for="vehicle_description" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Descripción/Modelo *</label>
         <input
           id="vehicle_description" type="text" bind:value={formData.vehicle_description} required placeholder="MODELO"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           class:border-red-500={validationErrors?.vehicle_description}
           spellcheck="true"
           lang="es"
@@ -218,7 +218,7 @@
         <label for="color" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Color</label>
         <input
           id="color" type="text" bind:value={formData.color} placeholder="COLOR"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           spellcheck="true"
           lang="es"
         />
@@ -228,7 +228,7 @@
         <label for="plate_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Placa</label>
         <input
           id="plate_number" type="text" bind:value={formData.plate_number} placeholder="PLACA"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
         />
       </div>
 
@@ -243,7 +243,7 @@
         <label for="fuel_type" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Combustible</label>
         <input
           id="fuel_type" type="text" bind:value={formData.fuel_type} placeholder="COMB."
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           spellcheck="true"
           lang="es"
         />
@@ -267,7 +267,7 @@
           id="extras"
           type="text"
           bind:value={formData.extras}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           placeholder="EXTRAS"
           spellcheck="true"
           autocorrect="on"
@@ -284,7 +284,7 @@
           id="notes"
           rows="2"
           bind:value={formData.notes}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm uppercase"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           placeholder="OBSERVACIONES..."
           spellcheck="true"
           autocorrect="on"
@@ -304,7 +304,7 @@
         <label for="vin" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">VIN (Físico)</label>
         <input
           id="vin" type="text" maxlength="17" bind:value={formData.vin} placeholder="VIN FÍSICO"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           class:border-red-500={validationErrors?.vin}
         />
         {#if validationErrors?.vin} <p class="text-red-500 text-xs mt-1">{validationErrors.vin}</p> {/if}
@@ -314,17 +314,17 @@
         <label for="vin_card" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Numero de VIN en Tarjeta</label>
         <input
           id="vin_card" type="text" maxlength="17" bind:value={formData.vin_card} placeholder="VIN TARJETA"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
-          class:border-red-500={validationErrors?.vin_card} 
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
+          class:border-red-500={validationErrors?.vin_card}
         />
-        {#if validationErrors?.vin_card} <p class="text-red-500 text-xs mt-1">{validationErrors.vin_card}</p> {/if} 
+        {#if validationErrors?.vin_card} <p class="text-red-500 text-xs mt-1">{validationErrors.vin_card}</p> {/if}
       </div>
 
       <div>
         <label for="engine_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Motor (Físico)</label>
         <input
           id="engine_number" type="text" maxlength="17" bind:value={formData.engine_number} placeholder="MOTOR FÍSICO #"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           class:border-red-500={validationErrors?.engine_number}
         />
         {#if validationErrors?.engine_number} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number}</p> {/if}
@@ -334,8 +334,8 @@
         <label for="engine_number_card" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Numero de Motor en Tarjeta</label>
         <input
           id="engine_number_card" type="text" maxlength="17" bind:value={formData.engine_number_card} placeholder="MOTOR TARJETA #"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
-          class:border-red-500={validationErrors?.engine_number_card} 
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
+          class:border-red-500={validationErrors?.engine_number_card}
         />
         {#if validationErrors?.engine_number_card} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number_card}</p> {/if}
       </div>
@@ -354,7 +354,7 @@
                 type="text"
                 placeholder="Descripción Deducción #{index + 1}"
                 bind:value={deduction.description}
-                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
                 spellcheck="true"
                 lang="es"
               />
@@ -364,7 +364,7 @@
                 min="0"
                 step="0.01"
                 bind:value={deduction.amount}
-                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 uppercase text-sm"
+                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
               />
             </div>
             <button 
