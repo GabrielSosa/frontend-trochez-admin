@@ -135,16 +135,16 @@
 
   // Format currency
   function formatCurrency(value) {
-    return new Intl.NumberFormat('es-HN', {
+    return new Intl.NumberFormat('es-CR', {
       style: 'currency',
-      currency: 'HNL'
+      currency: 'CRC'
     }).format(value);
   }
 
   // Format date
   function formatDate(dateString) {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('es-HN', {
+    return new Intl.DateTimeFormat('es-CR', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
