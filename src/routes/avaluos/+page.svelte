@@ -45,24 +45,24 @@
       avaluos = data.map(item => ({
         id: item.id,
         vehicle_appraisal_id: item.vehicle_appraisal_id || item.id, // Use vehicle_appraisal_id if available, otherwise use id
-        fecha: item.appraisal_date,
-        cliente: item.applicant,
-        vehiculo: `${item.brand} ${item.vehicle_description} ${item.model_year}`,
-        placa: item.plate_number,
+        fecha: item.appraisal_date || '',
+        cliente: item.applicant || '',
+        vehiculo: `${item.brand || ''} ${item.vehicle_description || ''} ${item.model_year || ''}`.trim(),
+        placa: item.plate_number || '',
         valor: item.appraisal_value_trochez, 
-        color: item.color,
-        kilometraje: item.mileage,
-        combustible: item.fuel_type,
-        motor: item.engine_size,
-        propietario: item.owner,
+        color: item.color || '',
+        kilometraje: item.mileage || '',
+        combustible: item.fuel_type || '',
+        motor: item.engine_size || '',
+        propietario: item.owner || '',
         valorUSD: item.appraisal_value_usd,
-        vin: item.vin,
-        numeroMotor: item.engine_number,
-        notas: item.notes,
+        vin: item.vin || '',
+        numeroMotor: item.engine_number || '',
+        notas: item.notes || '',
         validezDias: item.validity_days,
         validezKms: item.validity_kms,
-        extras: item.extras,
-        deduccion: item.deductions
+        extras: item.extras || '',
+        deduccion: item.deductions || ''
       }));
       filteredAvaluos = [...avaluos];
       updatePagination();
@@ -98,7 +98,8 @@
         (avaluo.vehiculo && avaluo.vehiculo.toLowerCase().includes(query)) ||
         (avaluo.placa && avaluo.placa.toLowerCase().includes(query)) ||
         (avaluo.color && avaluo.color.toLowerCase().includes(query)) ||
-        (avaluo.vin && avaluo.vin.toLowerCase().includes(query))
+        (avaluo.vin && avaluo.vin.toLowerCase().includes(query)) ||
+        (avaluo.vehicle_appraisal_id && avaluo.vehicle_appraisal_id.toString().includes(query))
       );
     }
     
@@ -239,7 +240,7 @@
               type="text"
               bind:value={searchQuery}
               on:input={handleSearch}
-              placeholder="Buscar por cliente, vehículo, placa, color o VIN..."
+              placeholder="Buscar por cliente, vehículo, placa, color, VIN o número de certificado..."
               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
             />
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
