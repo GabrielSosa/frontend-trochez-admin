@@ -36,15 +36,10 @@
         throw new Error(data.message || 'Error al iniciar sesión');
       }
       
-      // Log the entire response to see its structure
-      console.log('Login response:', data);
-      
       // Store token and user data - check all possible token field names
       const token = data.token || data.accessToken || data.access_token || data.jwt || data.id_token;
-      console.log('Token recibido:', token);
       
       if (!token) {
-        console.error('No se encontró token en la respuesta:', data);
         throw new Error('No se pudo obtener el token de autenticación');
       }
       
@@ -59,7 +54,6 @@
       // Redirect to dashboard
       goto('/');
     } catch (err) {
-      console.error('Login error:', err);
       error = err.message || 'Error al iniciar sesión. Intente nuevamente.';
     } finally {
       loading = false;

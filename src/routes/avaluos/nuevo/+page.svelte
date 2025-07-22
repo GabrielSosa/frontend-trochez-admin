@@ -26,15 +26,12 @@
       try {
         user = JSON.parse(userData);
       } catch (e) {
-        console.error('Error parsing user data:', e);
       }
     }
     
     const token = localStorage.getItem('jwtToken');
     if (token) {
-      console.log('Token value:', token.substring(0, 20) + '...');
     } else {
-      console.warn('No se encontró token JWT en localStorage');
       errorMessage = 'Sesión no válida. Por favor inicie sesión nuevamente.';
       setTimeout(() => goto('/login'), 2000);
     }
@@ -48,7 +45,7 @@
 
     try {
       // --- Use Shared Validation ---
-      validationErrors = validateAvaluoFormData(formData); 
+      validationErrors = validateAvaluoFormData(formData, false); 
       
       if (Object.keys(validationErrors).length > 0) {
          // Filter out empty messages just in case (though validateAvaluoFormData shouldn't produce them)
@@ -70,7 +67,6 @@
       const cleanedFormData = cleanAvaluoFormData(formData);
       // --- End Shared Cleaning ---
 
-      console.log('Datos enviados al API (Nuevo):', JSON.stringify(cleanedFormData, null, 2));
 
       try {
         const response = await apiFetch(ApiUrls.AVALUOS.create, {
@@ -84,7 +80,6 @@
         isSubmitting = false;
 
       } catch (apiError) {
-        console.error('API Error:', apiError);
         if (apiError.status === 401) {
           localStorage.removeItem('jwtToken');
           setTimeout(() => goto('/login'), 2000);
@@ -106,7 +101,6 @@
       }
       
     } catch (error) {
-      console.error('Error submitting form:', error);
       if (!errorMessage) { // Only set generic message if no specific API or validation error was set
          errorMessage = error.message || 'Ha ocurrido un error al guardar el avalúo.';
       }
@@ -168,7 +162,6 @@
         window.open(url, '_blank');
       }
     } catch (error) {
-      console.error('Error al obtener el certificado:', error);
       alert(`Error al obtener el certificado: ${error.message}`);
     } finally {
       // Ensure generating flag is reset

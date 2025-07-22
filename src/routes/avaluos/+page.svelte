@@ -24,13 +24,6 @@
     try {
       isLoading = true;
       
-      // Debug: Check if token exists
-      const token = localStorage.getItem('jwtToken');
-      console.log('Token en avaluos page:', token ? 'Existe' : 'No existe');
-      if (token) {
-        console.log('Token value:', token.substring(0, 20) + '...');
-      }
-      
       const data = await apiFetch(ApiUrls.AVALUOS.getAll);
       avaluos = data.map(item => ({
         id: item.id,
@@ -58,7 +51,6 @@
       filteredAvaluos = [...avaluos];
       updatePagination();
     } catch (error) {
-      console.error('Error fetching avalúos:', error);
       
       // Provide more detailed error information
       let errorMessage = 'Error al cargar los avalúos.';
@@ -85,7 +77,7 @@
       try {
         user = JSON.parse(userData);
       } catch (e) {
-        console.error('Error parsing user data:', e);
+        
       }
     }
 
@@ -232,7 +224,7 @@
         window.open(url, '_blank');
       }
     } catch (error) {
-      console.error('Error al obtener el certificado:', error);
+      
       alert(`Error al obtener el certificado: ${error.message}`);
     } finally {
       // Ensure generating flag is reset

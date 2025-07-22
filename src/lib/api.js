@@ -52,8 +52,6 @@ export const apiFetch = async (url, options = {}) => {
   // Agregar token de autenticación si existe
   try {
     const token = localStorage.getItem('jwtToken');
-    console.log('Token en localStorage:', token);
-    
     if (token && token !== 'undefined' && token !== 'null') {
       // Asegurarse de que el token tenga el formato correcto
       if (!token.startsWith('Bearer ')) {
@@ -61,13 +59,9 @@ export const apiFetch = async (url, options = {}) => {
       } else {
         defaultOptions.headers.Authorization = token;
       }
-      console.log('Token aplicado:', defaultOptions.headers.Authorization);
     } else {
-      console.warn('No se encontró token JWT válido en localStorage');
       // Si estamos intentando acceder a una ruta protegida sin token, redirigir al login
       if (!url.includes('/signin') && !url.includes('/signup')) {
-        console.warn('Intentando acceder a ruta protegida sin token. Redirigiendo...');
-        // Usar setTimeout para evitar problemas con la redirección durante la ejecución actual
         setTimeout(() => {
           if (typeof window !== 'undefined') {
             window.location.href = '/login';
@@ -75,9 +69,7 @@ export const apiFetch = async (url, options = {}) => {
         }, 100);
       }
     }
-  } catch (e) {
-    console.error('Error al obtener el token JWT:', e);
-  }
+  } catch (e) {}
 
   // Combinar opciones
   const fetchOptions = {
@@ -101,9 +93,7 @@ export const apiFetch = async (url, options = {}) => {
     
     // Si es un error de autenticación, limpiar el token y redirigir al login
     if (response.status === 401) {
-      console.error('Error de autenticación 401. Limpiando token...');
       localStorage.removeItem('jwtToken');
-      
       // Redirigir al login después de un breve retraso
       setTimeout(() => {
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {

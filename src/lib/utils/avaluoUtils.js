@@ -3,7 +3,7 @@
  * @param {object} formData - The form data object.
  * @returns {object} An object containing validation errors. Keys are field names, values are error messages.
  */
-export function validateAvaluoFormData(formData) {
+export function validateAvaluoFormData(formData, isEdit = false) {
   const errors = {};
 
   // Required fields
@@ -13,7 +13,7 @@ export function validateAvaluoFormData(formData) {
   if (!formData.brand) {
     errors.brand = 'La marca es obligatoria.';
   }
-  if (!formData.vehicle_description) {
+  if (!formData.vehicle_description && !isEdit) {
     errors.vehicle_description = 'La descripción es obligatoria.';
   }
   if (!formData.appraisal_value_trochez) {

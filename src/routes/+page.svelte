@@ -101,7 +101,6 @@
       try {
         user = JSON.parse(userData);
       } catch (e) {
-        console.error('Error parsing user data:', e);
       }
     }
   });

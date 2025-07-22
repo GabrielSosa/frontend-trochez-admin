@@ -40,7 +40,6 @@
     try {
       isLoading = true;
       const data = await apiFetch(ApiUrls.AVALUOS.getById(avaluoId));
-      console.log('Datos del avalúo cargados:', data);
       
       // Map API data to form data - This overwrites the defaults
       formData = {
@@ -73,7 +72,6 @@
       };
       
     } catch (error) {
-      console.error('Error al cargar el avalúo:', error);
       errorMessage = `Error al cargar el avalúo: ${error.message || 'Error desconocido'}`;
        if (error.status === 401) {
           localStorage.removeItem('jwtToken');
@@ -97,7 +95,7 @@
 
     try {
       // --- Use Shared Validation ---
-      validationErrors = validateAvaluoFormData(formData); 
+      validationErrors = validateAvaluoFormData(formData, true); 
       
       if (Object.keys(validationErrors).length > 0) {
          // Filter out empty messages just in case
@@ -118,8 +116,6 @@
       const cleanedFormData = cleanAvaluoFormData(formData);
       // --- End Shared Cleaning ---
 
-      console.log('Datos enviados al API (Actualización):', JSON.stringify(cleanedFormData, null, 2));
-
       try {
         // Send the update request
         await apiFetch(ApiUrls.AVALUOS.update(avaluoId), {
@@ -133,7 +129,6 @@
         isSubmitting = false;
 
       } catch (apiError) {
-        console.error('API Error:', apiError);
          if (apiError.status === 401) {
           localStorage.removeItem('jwtToken');
           setTimeout(() => goto('/login'), 2000);
@@ -154,7 +149,6 @@
       }
 
     } catch (error) {
-      console.error('Error submitting form:', error);
       if (!errorMessage) { // Only set generic message if no specific API or validation error was set
           errorMessage = error.message || 'Ha ocurrido un error al actualizar el avalúo.';
       }
@@ -217,7 +211,6 @@
         window.open(url, '_blank');
       }
     } catch (error) {
-      console.error('Error al obtener el certificado:', error);
       alert(`Error al obtener el certificado: ${error.message}`);
     } finally {
       // Ensure generating flag is reset
@@ -241,19 +234,19 @@
         <p class="text-gray-500">Cargando datos del avalúo...</p>
          <!-- Optional: Add a spinner -->
       </div>
-    {:else if errorMessage && !isLoading} 
-       <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
+    {:else if errorMessage}
+      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
         <span class="block sm:inline font-medium">Error:</span>
-        <span class="block sm:inline">{errorMessage}</span>
-         {#if Object.keys(validationErrors).length > 0 && !errorMessage.includes('validación')}
-           <ul class="mt-2 list-disc list-inside">
-             {#each Object.entries(validationErrors) as [field, message]}
-                {#if message}
-                 <li><strong>{field}:</strong> {message}</li>
-               {/if}
-             {/each}
-           </ul>
-         {/if}
+        <span class="block sm:inline">{errorMessage}{Object.keys(validationErrors).length > 0 ? ' Corrige los siguientes campos:' : ''}</span>
+        {#if Object.keys(validationErrors).length > 0}
+          <ul class="mt-2 list-disc list-inside">
+            {#each Object.entries(validationErrors) as [field, message]}
+              {#if message}
+                <li><strong>{field}:</strong> {message}</li>
+              {/if}
+            {/each}
+          </ul>
+        {/if}
       </div>
     {:else}
       {#if successMessage}
