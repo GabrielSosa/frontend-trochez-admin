@@ -3,6 +3,7 @@
   export let formData;
   export let validationErrors = {};
   export let isSubmitting = false;
+  export let isEdit = false;
 
   // Dispatchers for events
   import { createEventDispatcher } from 'svelte';
@@ -76,6 +77,8 @@
   function closeValueModal() {
     isValueModalOpen = false;
   }
+
+  $: requiredVehicleDescription = !isEdit;
 </script>
 
 <form on:submit|preventDefault={triggerSubmit} class="bg-white rounded-lg shadow overflow-hidden">
@@ -216,7 +219,11 @@
       <div class="md:col-span-2">
         <label for="vehicle_description" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Descripción/Modelo *</label>
         <input
-          id="vehicle_description" type="text" bind:value={formData.vehicle_description} required placeholder="MODELO"
+          id="vehicle_description"
+          type="text"
+          bind:value={formData.vehicle_description}
+          required={requiredVehicleDescription}
+          placeholder="MODELO"
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
           class:border-red-500={validationErrors?.vehicle_description}
           spellcheck="true"

@@ -7,9 +7,11 @@ const AvaluoForm = create_ssr_component(($$result, $$props, $$bindings, slots) =
   let totalDeductions;
   let apprasail_value_lower_cost;
   let apprasail_value_lower_bank;
+  let requiredVehicleDescription;
   let { formData } = $$props;
   let { validationErrors = {} } = $$props;
   let { isSubmitting = false } = $$props;
+  let { isEdit = false } = $$props;
   createEventDispatcher();
   if (!formData.deductions) {
     formData.deductions = [];
@@ -32,6 +34,7 @@ const AvaluoForm = create_ssr_component(($$result, $$props, $$bindings, slots) =
   if ($$props.formData === void 0 && $$bindings.formData && formData !== void 0) $$bindings.formData(formData);
   if ($$props.validationErrors === void 0 && $$bindings.validationErrors && validationErrors !== void 0) $$bindings.validationErrors(validationErrors);
   if ($$props.isSubmitting === void 0 && $$bindings.isSubmitting && isSubmitting !== void 0) $$bindings.isSubmitting(isSubmitting);
+  if ($$props.isEdit === void 0 && $$bindings.isEdit && isEdit !== void 0) $$bindings.isEdit(isEdit);
   totalDeductions = formData.deductions.reduce(
     (sum, deduction) => {
       const amount = Number(deduction.amount) || 0;
@@ -41,6 +44,7 @@ const AvaluoForm = create_ssr_component(($$result, $$props, $$bindings, slots) =
   );
   apprasail_value_lower_cost = Math.max(0, (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions - (Number(formData.discounts) || 0));
   apprasail_value_lower_bank = Math.max(0, (Number(formData.apprasail_value_bank) || 0) - totalDeductions - (Number(formData.discounts) || 0));
+  requiredVehicleDescription = !isEdit;
   return `<form class="bg-white rounded-lg shadow overflow-hidden"> <div class="p-6 border-b border-gray-200"><div class="flex justify-between items-start gap-6 mb-4"> <div class="w-1/4"><label for="appraisal_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-1se3ncz">No. Avalúo</label> <p class="w-full p-1 border-b border-gray-400 text-sm font-semibold">${escape(formData.appraisal_number || "N/A")}</p></div>  <div class="w-1/3"><div class="border border-gray-300 rounded-md p-2 space-y-1 text-right"><div><input id="appraisal_date" type="date" required class="${[
     "focus:outline-none text-lg text-right",
     (validationErrors?.appraisal_date ? "border-red-500" : "") + " " + (!validationErrors?.appraisal_date ? "border-b" : "") + " " + (!validationErrors?.appraisal_date ? "border-gray-400" : "")
@@ -50,7 +54,7 @@ const AvaluoForm = create_ssr_component(($$result, $$props, $$bindings, slots) =
   ].join(" ").trim()}" spellcheck="true" lang="es"${add_attribute("value", formData.applicant, 0)}> ${validationErrors?.applicant ? `<p class="text-red-500 text-xs mt-1">${escape(validationErrors.applicant)}</p>` : ``}</div> <div><label for="owner" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-1cpnzmh">Propietario</label> <input id="owner" type="text" placeholder="PROPIETARIO" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" spellcheck="true" lang="es"${add_attribute("value", formData.owner, 0)}></div></div></div>  <div class="p-6 border-b border-gray-200"><h2 class="text-lg font-semibold text-gray-800 mb-4 uppercase" data-svelte-h="svelte-jrjfog">Información del Vehículo</h2> <div class="grid grid-cols-1 md:grid-cols-5 gap-x-6 gap-y-4"> <div class="md:col-span-1"><label for="brand" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-19o4y3z">Marca *</label> <input id="brand" type="text" required placeholder="MARCA" class="${[
     "w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm",
     validationErrors?.brand ? "border-red-500" : ""
-  ].join(" ").trim()}" spellcheck="true" lang="es"${add_attribute("value", formData.brand, 0)}> ${validationErrors?.brand ? `<p class="text-red-500 text-xs mt-1">${escape(validationErrors.brand)}</p>` : ``}</div> <div class="md:col-span-2"><label for="vehicle_description" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-6sr79b">Descripción/Modelo *</label> <input id="vehicle_description" type="text" required placeholder="MODELO" class="${[
+  ].join(" ").trim()}" spellcheck="true" lang="es"${add_attribute("value", formData.brand, 0)}> ${validationErrors?.brand ? `<p class="text-red-500 text-xs mt-1">${escape(validationErrors.brand)}</p>` : ``}</div> <div class="md:col-span-2"><label for="vehicle_description" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-6sr79b">Descripción/Modelo *</label> <input id="vehicle_description" type="text" ${requiredVehicleDescription ? "required" : ""} placeholder="MODELO" class="${[
     "w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm",
     validationErrors?.vehicle_description ? "border-red-500" : ""
   ].join(" ").trim()}" spellcheck="true" lang="es"${add_attribute("value", formData.vehicle_description, 0)}> ${validationErrors?.vehicle_description ? `<p class="text-red-500 text-xs mt-1">${escape(validationErrors.vehicle_description)}</p>` : ``}</div> <div class="md:col-span-1"></div> <div class="md:col-span-1"><label for="model_year" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-13jl9qi">Año</label> <input id="model_year" type="number" min="1900"${add_attribute("max", (/* @__PURE__ */ new Date()).getFullYear() + 1, 0)} placeholder="AÑO" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"${add_attribute("value", formData.model_year, 0)}></div> <div class="md:col-span-1"><label for="color" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-15j1zem">Color</label> <input id="color" type="text" placeholder="COLOR" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" spellcheck="true" lang="es"${add_attribute("value", formData.color, 0)}></div> <div class="md:col-span-1"><label for="plate_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-z647m9">Placa</label> <input id="plate_number" type="text" placeholder="PLACA" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"${add_attribute("value", formData.plate_number, 0)}></div> <div class="md:col-span-1"><label for="mileage" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-1npq465">Kilometraje</label> <input id="mileage" type="number" min="0" placeholder="KM" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"${add_attribute("value", formData.mileage, 0)}></div> <div class="md:col-span-1"><label for="fuel_type" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-1jy4g3s">Combustible</label> <input id="fuel_type" type="text" placeholder="COMB." class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" spellcheck="true" lang="es"${add_attribute("value", formData.fuel_type, 0)}></div>  <div class="md:col-span-1"><label for="engine_size" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-s468bi">Cilindraje (cc)</label> <input id="engine_size" type="number" min="0" step="0.1" placeholder="CC" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"${add_attribute("value", formData.engine_size, 0)}></div>  <div class="md:col-span-4"><label for="extras" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-1h65qrg">Extras</label> <input id="extras" type="text" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" placeholder="EXTRAS" spellcheck="true" autocorrect="on" autocomplete="on" lang="es"${add_attribute("value", formData.extras, 0)}></div>   <div class="md:col-span-5"><label for="notes" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-az6p6u">Observaciones</label> <textarea id="notes" rows="2" class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" placeholder="OBSERVACIONES..." spellcheck="true" autocorrect="on" autocomplete="on" lang="es">${escape(formData.notes || "")}</textarea></div></div></div>  <div class="p-6 border-b border-gray-200"><h2 class="text-lg font-semibold text-gray-800 mb-4 uppercase" data-svelte-h="svelte-nl96es">Verificación de Números</h2> <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4"><div><label for="vin" class="block text-xs font-medium text-gray-500 uppercase mb-0.5" data-svelte-h="svelte-2bdks8">VIN (Físico)</label> <input id="vin" type="text" maxlength="17" placeholder="VIN FÍSICO" class="${[
@@ -132,7 +136,12 @@ const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
     $$result.head = previous_head;
     $$rendered = `<div class="min-h-screen bg-gray-50">${validate_component(Navbar, "Navbar").$$render($$result, { user }, {}, {})} <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"><div class="flex justify-between items-center mb-6" data-svelte-h="svelte-1n7a6jo"><h1 class="text-2xl font-bold text-gray-800">Nuevo Avalúo</h1></div> ${``} ${``} ${validate_component(AvaluoForm, "AvaluoForm").$$render(
       $$result,
-      { validationErrors, isSubmitting, formData },
+      {
+        validationErrors,
+        isSubmitting,
+        isEdit: false,
+        formData
+      },
       {
         formData: ($$value) => {
           formData = $$value;
