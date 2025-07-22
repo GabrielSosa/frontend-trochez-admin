@@ -1,4 +1,4 @@
-import { c as create_ssr_component, g as add_attribute, e as escape } from "../../../chunks/ssr.js";
+import { c as create_ssr_component, f as add_attribute, e as escape } from "../../../chunks/ssr.js";
 import "@sveltejs/kit/internal";
 import "../../../chunks/exports.js";
 import "../../../chunks/state.svelte.js";

@@ -1,4 +1,4 @@
-import { c as create_ssr_component, d as subscribe, j as each, e as escape, g as add_attribute } from "./ssr.js";
+import { c as create_ssr_component, d as subscribe, h as each, e as escape, f as add_attribute } from "./ssr.js";
 import { p as page } from "./stores.js";
 const Navbar = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let $page, $$unsubscribe_page;

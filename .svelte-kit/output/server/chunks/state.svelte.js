@@ -1,4 +1,4 @@
-import { l as onMount } from "./ssr.js";
+import { o as onMount } from "./ssr.js";
 const is_legacy = onMount.toString().includes("$$") || /function \w+\(\) \{\}/.test(onMount.toString());
 if (is_legacy) {
   ({

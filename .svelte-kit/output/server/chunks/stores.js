@@ -1,4 +1,4 @@
-import { k as getContext } from "./ssr.js";
+import { i as getContext } from "./ssr.js";
 import "@sveltejs/kit/internal";
 import "./exports.js";
 import "./state.svelte.js";

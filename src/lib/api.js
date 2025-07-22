@@ -34,6 +34,14 @@ export class ApiUrls {
     get: (vehicle_appraisal_id) => `${API_BASE_URL}/certificates/appraisal/${vehicle_appraisal_id}`
   };
 
+  // URLs para dashboard
+  static DASHBOARD = {
+    summary: `${API_BASE_URL}/api/dashboard/summary`,
+    ventasDia: `${API_BASE_URL}/api/dashboard/ventas-dia`,
+    ventasMes: `${API_BASE_URL}/api/dashboard/ventas-mes`,
+    carrosMasAvaluos: `${API_BASE_URL}/api/dashboard/carros-mas-avaluos`
+  };
+
   // Método para obtener URLs personalizadas
   static getCustomUrl(endpoint) {
     return `${API_BASE_URL}${endpoint}`;
