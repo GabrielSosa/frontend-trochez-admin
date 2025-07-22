@@ -20,6 +20,18 @@
   if (formData.extras === undefined) {
       formData.extras = ''; 
   }
+  // Ensure cert exists, initialize if not
+  if (formData.cert === undefined) {
+      formData.cert = ''; 
+  }
+  // Ensure bank_value_in_dollars exists, initialize if not
+  if (formData.bank_value_in_dollars === undefined) {
+      formData.bank_value_in_dollars = 0; 
+  }
+  // Ensure discounts exists, initialize if not
+  if (formData.discounts === undefined) {
+      formData.discounts = 0; 
+  }
 
   // State for modal visibility
   let isValueModalOpen = false;
@@ -31,10 +43,10 @@
   }, 0);
 
   // Reactive calculation for lower cost value
-  $: apprasail_value_lower_cost = Math.max(0, (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions);
+  $: apprasail_value_lower_cost = Math.max(0, (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions - (Number(formData.discounts) || 0));
 
   // Reactive calculation for lower bank value
-  $: apprasail_value_lower_bank = Math.max(0, (Number(formData.apprasail_value_bank) || 0) - totalDeductions);
+  $: apprasail_value_lower_bank = Math.max(0, (Number(formData.apprasail_value_bank) || 0) - totalDeductions - (Number(formData.discounts) || 0));
 
   // Update apprasail_value_lower_cost and apprasail_value_lower_bank before submit
   function triggerSubmit() {
@@ -111,8 +123,19 @@
       </div>
     </div>
 
-    <!-- Validity Fields (Moved below the new header) -->
+    <!-- Certificate Number Field -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 pt-4 border-t border-gray-100"> 
+      <div>
+        <label for="cert" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. de Certificado</label>
+        <input
+          id="cert"
+          type="text"
+          bind:value={formData.cert}
+          placeholder="NÚMERO DE CERTIFICADO"
+          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
+          spellcheck="false"
+        />
+      </div>
       <div>
         <label for="validity_days" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Validez (días)</label> 
         <input
@@ -135,9 +158,6 @@
           class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" 
         />
       </div>
-       <div class="md:col-span-1"> 
-         &nbsp;
-       </div>
     </div>
   </div>
   
@@ -420,7 +440,7 @@
         </svg>
       </button>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">     
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">     
       <!-- Valor Garantía Bancaria -->
       <div>
         <label for="apprasail_value_lower_bank" class="block text-xs font-medium text-gray-700 mb-1">Valor Garantía Bancaria</label>
@@ -450,6 +470,20 @@
           class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold text-center"
         />
       </div>
+      <!-- Valor Garantía Bancaria en Dólares -->
+      <div>
+        <label for="bank_value_in_dollars" class="block text-xs font-medium text-gray-700 mb-1">Valor Garantía Bancaria (USD)</label>
+        <input
+          id="bank_value_in_dollars"
+          type="number"
+          min="0"
+          step="0.01"
+          bind:value={formData.bank_value_in_dollars}
+          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold text-center"
+          placeholder="0.00"
+        />
+      </div>
+ 
     </div>
   </div>
 
@@ -522,6 +556,23 @@
             <p class="text-red-500 text-xs mt-1">{validationErrors.apprasail_value_bank}</p>
           {/if}
         </div>
+        
+        <div>
+          <label for="modal_discounts" class="block text-sm font-medium text-gray-700 mb-1">Descuento</label>
+          <input
+            id="modal_discounts"
+            type="number"
+            min="0"
+            step="0.01"
+            bind:value={formData.discounts}
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="0.00"
+          />
+          {#if validationErrors?.discounts}
+            <p class="text-red-500 text-xs mt-1">{validationErrors.discounts}</p>
+          {/if}
+        </div>
+        
       </div>
 
       <div class="mt-6 flex justify-end space-x-3">

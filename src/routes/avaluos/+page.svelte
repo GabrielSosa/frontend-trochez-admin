@@ -19,18 +19,8 @@
   let generatingCertificateId = null;
 
 
-  onMount(async () => {
-    // Get user data from localStorage if available
-    const userData = localStorage.getItem('userData');
-    if (userData) {
-      try {
-        user = JSON.parse(userData);
-      } catch (e) {
-        console.error('Error parsing user data:', e);
-      }
-    }
-
-    // Fetch avalúos from API
+  // Function to load avalúos data
+  async function loadAvaluos() {
     try {
       isLoading = true;
       
@@ -62,7 +52,8 @@
         validezDias: item.validity_days,
         validezKms: item.validity_kms,
         extras: item.extras || '',
-        deduccion: item.deductions || ''
+        deduccion: item.deductions || '',
+        cert: item.cert || ''
       }));
       filteredAvaluos = [...avaluos];
       updatePagination();
@@ -85,6 +76,36 @@
     } finally {
       isLoading = false;
     }
+  }
+
+  onMount(async () => {
+    // Get user data from localStorage if available
+    const userData = localStorage.getItem('userData');
+    if (userData) {
+      try {
+        user = JSON.parse(userData);
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+
+    // Load avalúos data
+    await loadAvaluos();
+
+    // Add visibility change listener to reload data when returning from other pages
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Reload data when page becomes visible (user returns from create/edit)
+        loadAvaluos();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Cleanup function
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   });
 
   // Filter avalúos based on search query
@@ -99,7 +120,8 @@
         (avaluo.placa && avaluo.placa.toLowerCase().includes(query)) ||
         (avaluo.color && avaluo.color.toLowerCase().includes(query)) ||
         (avaluo.vin && avaluo.vin.toLowerCase().includes(query)) ||
-        (avaluo.vehicle_appraisal_id && avaluo.vehicle_appraisal_id.toString().includes(query))
+        (avaluo.vehicle_appraisal_id && avaluo.vehicle_appraisal_id.toString().includes(query)) ||
+        (avaluo.cert && avaluo.cert.toLowerCase().includes(query))
       );
     }
     
@@ -144,7 +166,15 @@
 
   // Format date
   function formatDate(dateString) {
+    if (!dateString) return '';
+    
     const date = new Date(dateString);
+    
+    // Check if the date is valid
+    if (isNaN(date.getTime())) {
+      return '';
+    }
+    
     return new Intl.DateTimeFormat('es-CR', {
       year: 'numeric',
       month: 'short',
@@ -218,15 +248,27 @@
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="flex justify-between items-center mb-6">
       <h1 class="text-2xl font-bold text-gray-800">Gestión de Avalúos</h1>
-      <button 
-        on:click={handleCreateNew}
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-          <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-        </svg>
-        Nuevo Avalúo
-      </button>
+      <div class="flex gap-2">
+        <button 
+          on:click={loadAvaluos}
+          disabled={isLoading}
+          class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+          </svg>
+          {isLoading ? 'Actualizando...' : 'Actualizar'}
+        </button>
+        <button 
+          on:click={handleCreateNew}
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+          </svg>
+          Nuevo Avalúo
+        </button>
+      </div>
     </div>
 
     <!-- Search and filters -->
@@ -240,7 +282,7 @@
               type="text"
               bind:value={searchQuery}
               on:input={handleSearch}
-              placeholder="Buscar por cliente, vehículo, placa, color, VIN o número de certificado..."
+              placeholder="Buscar por cliente, vehículo, placa, color, VIN, número de certificado o cert..."
               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
             />
             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -273,6 +315,7 @@
             <thead class="bg-gray-50">
               <tr>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Certificado</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehículo</th>
@@ -286,6 +329,7 @@
               {#each paginatedAvaluos as avaluo (avaluo.vehicle_appraisal_id)}
                 <tr class="hover:bg-gray-50">
                   <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{avaluo.vehicle_appraisal_id}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{avaluo.cert || 'N/A'}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(avaluo.fecha)}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.cliente}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.vehiculo}</td>

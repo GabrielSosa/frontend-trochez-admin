@@ -11,7 +11,10 @@
   let isSubmitting = false;
   let successMessage = '';
   let errorMessage = '';
-  let validationErrors = {}; 
+  let validationErrors = {};
+  let savedAvaluoId = null; // Para almacenar el ID del avalúo guardado
+  let generatingCertificate = false;
+  let generatingCertificateId = null; 
 
   // Use the default structure and override the date
   let formData = getDefaultAvaluoFormData();
@@ -75,10 +78,10 @@
           body: JSON.stringify(cleanedFormData)
         });
         
+        // Guardar el ID del avalúo creado
+        savedAvaluoId = response.id || response.vehicle_appraisal_id;
         successMessage = 'Avalúo guardado correctamente.';
-        setTimeout(() => {
-          goto('/avaluos');
-        }, 2000);
+        isSubmitting = false;
 
       } catch (apiError) {
         console.error('API Error:', apiError);
@@ -115,6 +118,64 @@
   function handleCancel() {
     goto('/avaluos');
   }
+
+  // Función para imprimir certificado
+  async function printCertificate(avaluoId) {
+    try {
+      const token = localStorage.getItem('jwtToken');
+      if (!token) {
+        alert('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
+        setTimeout(() => goto('/login'), 1000);
+        return;
+      }
+      
+      // Set generating flag
+      generatingCertificate = true;
+      generatingCertificateId = avaluoId;
+      
+      // Make a fetch request with the JWT token in the Authorization header
+      const response = await fetch(ApiUrls.CERTIFICADOS.get(avaluoId), {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Error al obtener el certificado: ${response.status} ${response.statusText}`);
+      }
+      
+      // Check content type to handle different response types
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/pdf')) {
+        // Handle PDF response
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } else if (contentType && contentType.includes('application/json')) {
+        // Handle JSON response (might contain a URL or error)
+        const data = await response.json();
+        if (data.url) {
+          window.open(data.url, '_blank');
+        } else {
+          throw new Error(data.message || 'Error al generar el certificado');
+        }
+      } else {
+        // Handle other response types
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      }
+    } catch (error) {
+      console.error('Error al obtener el certificado:', error);
+      alert(`Error al obtener el certificado: ${error.message}`);
+    } finally {
+      // Ensure generating flag is reset
+      generatingCertificate = false;
+      generatingCertificateId = null;
+    }
+  }
 </script>
 
 <div class="min-h-screen bg-gray-50">
@@ -127,7 +188,35 @@
 
     {#if successMessage}
       <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
-        <span class="block sm:inline">{successMessage}</span>
+        <div class="flex justify-between items-center">
+          <span class="block sm:inline">{successMessage}</span>
+          <div class="flex gap-2">
+            <button 
+              on:click={() => printCertificate(savedAvaluoId)}
+              disabled={generatingCertificate}
+              class="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-3 py-1 rounded text-sm font-medium transition-colors flex items-center"
+            >
+              {#if generatingCertificate && generatingCertificateId === savedAvaluoId}
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Generando...
+              {:else}
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                </svg>
+                Imprimir Certificado
+              {/if}
+            </button>
+            <button 
+              on:click={() => goto('/avaluos')}
+              class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+            >
+              Volver a Lista
+            </button>
+          </div>
+        </div>
       </div>
     {/if}
 

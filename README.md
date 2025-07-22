@@ -38,3 +38,44 @@ nvm use 22
    git clone [repository-url]
    cd frontend-trochez-admin
    ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+## Running the Project
+
+### Development Mode
+
+To run the project in development mode with hot reload:
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173` (or the next available port).
+
+### Build for Production
+
+To build the project for production:
+
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+To preview the production build locally:
+
+```bash
+npm run preview
+```
+
+## Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run check` - Type check the project
+- `npm run check:watch` - Type check the project in watch mode
