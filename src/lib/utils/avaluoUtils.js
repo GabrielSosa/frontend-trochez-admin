@@ -122,7 +122,7 @@ export function mapApiDataToFormData(apiData) {
     appraisal_date: apiData.appraisal_date || '',
     vehicle_description: apiData.vehicle_description || '',
     brand: apiData.brand || '',
-    model_year: apiData.model_year || new Date().getFullYear(),
+    model_year: apiData.model_year || 0,
     color: apiData.color || '',
     mileage: apiData.mileage || 0,
     fuel_type: apiData.fuel_type || 'GAS',
@@ -162,7 +162,7 @@ export function getDefaultAvaluoFormData() {
     appraisal_date: '', // Default to empty, override in 'nuevo' if needed
     vehicle_description: '',
     brand: '',
-    model_year: new Date().getFullYear(),
+    model_year: 0,
     color: '',
     mileage: 0,
     fuel_type: 'GAS', // Default fuel type

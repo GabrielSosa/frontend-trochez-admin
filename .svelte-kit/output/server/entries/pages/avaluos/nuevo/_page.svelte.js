@@ -3,7 +3,6 @@ import "@sveltejs/kit/internal";
 import "../../../../chunks/exports.js";
 import "../../../../chunks/state.svelte.js";
 import { N as Navbar } from "../../../../chunks/Navbar.js";
-import { g as getDefaultAvaluoFormData } from "../../../../chunks/avaluoUtils.js";
 const AvaluoForm = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let totalDeductions;
   let apprasail_value_lower_cost;
@@ -81,6 +80,44 @@ const AvaluoForm = create_ssr_component(($$result, $$props, $$bindings, slots) =
   }))}</div> ${validationErrors?.appraisal_value_trochez ? `<p class="text-red-500 text-xs mt-1" data-svelte-h="svelte-1bghyyu">Error en Valor Avaluo Trochez (ver detalles)</p>` : ``}</div>  <div><label for="appraisal_value_usd" class="block text-xs font-medium text-gray-700 mb-1" data-svelte-h="svelte-2l202z">Valor (Dólares)</label> <input id="appraisal_value_usd" type="number" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold text-center"${add_attribute("value", formData.appraisal_value_usd, 0)}></div>  <div><label for="bank_value_in_dollars" class="block text-xs font-medium text-gray-700 mb-1" data-svelte-h="svelte-k37mqr">Valor Garantía Bancaria (USD)</label> <input id="bank_value_in_dollars" type="number" min="0" step="0.01" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold text-center" placeholder="0.00"${add_attribute("value", formData.bank_value_in_dollars, 0)}></div></div></div>  <div class="p-6 bg-gray-50 flex justify-end items-center space-x-4"><button type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50" ${isSubmitting ? "disabled" : ""}>Cancelar</button> <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed" ${isSubmitting ? "disabled" : ""}>${isSubmitting ? `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
         Guardando...` : `Guardar Avalúo`}</button></div></form>  ${``}`;
 });
+function getDefaultAvaluoFormData() {
+  return {
+    appraisal_date: "",
+    // Default to empty, override in 'nuevo' if needed
+    vehicle_description: "",
+    brand: "",
+    model_year: 0,
+    color: "",
+    mileage: 0,
+    fuel_type: "GAS",
+    // Default fuel type
+    engine_size: 0,
+    plate_number: "",
+    applicant: "",
+    owner: "",
+    appraisal_value_usd: 0,
+    appraisal_value_trochez: 0,
+    apprasail_value_bank: 0,
+    apprasail_value_lower_cost: 0,
+    apprasail_value_lower_bank: 0,
+    vin: "",
+    vin_card: "",
+    engine_number: "",
+    engine_number_card: "",
+    notes: "",
+    extras: "",
+    validity_days: 30,
+    validity_kms: 1e3,
+    modified_km: 0,
+    extra_value: 0,
+    discounts: 0,
+    bank_value_in_dollars: 0,
+    referencia_original: "",
+    cert: "",
+    vehicle_appraisal_id: null,
+    deductions: []
+  };
+}
 const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let user = null;
   let isSubmitting = false;

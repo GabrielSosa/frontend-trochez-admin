@@ -296,7 +296,7 @@
     </div>
 
     <!-- Avalúos table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="bg-white rounded-lg shadow overflow-hidden max-w-full">
       {#if isLoading}
         <div class="p-8 flex justify-center">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -310,8 +310,8 @@
           Cargando datos para la página actual...
         </div>
       {:else}
-        <div class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
+        <div class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg" style="scrollbar-width: thin; scrollbar-color: #d1d5db #f3f4f6;">
+          <table class="min-w-full divide-y divide-gray-200" style="min-width: 900px;">
             <thead class="bg-gray-50">
               <tr>
                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
@@ -432,3 +432,24 @@
     </div>
   </main>
 </div>
+
+<style>
+  /* Estilos personalizados para el scrollbar */
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 8px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-track {
+    background: #f3f4f6;
+    border-radius: 4px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+  }
+  
+  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+</style>

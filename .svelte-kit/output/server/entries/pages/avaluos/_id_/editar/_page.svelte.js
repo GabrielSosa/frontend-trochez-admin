@@ -4,13 +4,11 @@ import "../../../../../chunks/exports.js";
 import "../../../../../chunks/state.svelte.js";
 import { p as page } from "../../../../../chunks/stores.js";
 import { N as Navbar } from "../../../../../chunks/Navbar.js";
-import { g as getDefaultAvaluoFormData } from "../../../../../chunks/avaluoUtils.js";
 const Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let $page, $$unsubscribe_page;
   $$unsubscribe_page = subscribe(page, (value) => $page = value);
   let avaluoId = $page.params.id;
   let user = null;
-  getDefaultAvaluoFormData();
   let $$settled;
   let $$rendered;
   let previous_head = $$result.head;

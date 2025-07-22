@@ -49,7 +49,7 @@
         appraisal_date: data.appraisal_date?.split('T')[0] || '', // Fallback to empty if not present
         vehicle_description: data.vehicle_description || '',
         brand: data.brand || '',
-        model_year: data.model_year || new Date().getFullYear(), // Fallback to current year
+        model_year: data.model_year || 0, // Fallback to 0
         color: data.color || '',
         mileage: data.mileage || 0,
         fuel_type: data.fuel_type || 'GAS', // Fallback to GAS
