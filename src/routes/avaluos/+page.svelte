@@ -9,25 +9,71 @@
   let avaluos = [];
   let filteredAvaluos = [];
   let isLoading = true;
+  let searchTimeout = null;
+  let isSearching = false;
   
   // Pagination variables
   let currentPage = 1;
   let itemsPerPage = 10;
   let totalPages = 0;
+  let total = 0;
   let paginatedAvaluos = [];
   let generatingCertificate = false;
   let generatingCertificateId = null;
+  let isChangingPage = false;
 
 
-  // Function to load avalúos data
-  async function loadAvaluos() {
+  // Function to load avalúos data with backend pagination
+  async function loadAvaluos(page = 1, search = '') {
     try {
       isLoading = true;
       
-      const data = await apiFetch(ApiUrls.AVALUOS.getAll);
+      let url;
+      let params;
+      
+      if (search && search.trim()) {
+        // Use search endpoint
+        params = new URLSearchParams({
+          query: search.trim(),
+          page: page.toString(),
+          limit: itemsPerPage.toString()
+        });
+        url = `https://api-backend-trochez.onrender.com/api/appraisals/search?${params}`;
+      } else {
+        // Use regular endpoint
+        params = new URLSearchParams({
+          page: page.toString(),
+          limit: itemsPerPage.toString()
+        });
+        url = `${ApiUrls.AVALUOS.getAll}?${params}`;
+      }
+      
+      const response = await apiFetch(url);
+      
+      // Handle different response formats
+      let data;
+      
+      if (response.data && response.pagination) {
+        // New format with pagination metadata
+        data = response.data;
+        total = response.pagination.total_count;
+        totalPages = response.pagination.total_pages;
+
+      } else if (response.avaluos && response.total !== undefined) {
+        // Alternative format with pagination metadata
+        data = response.avaluos;
+        total = response.total;
+        totalPages = response.totalPages || Math.ceil(total / itemsPerPage);
+      } else {
+        // Fallback to old format
+        data = response;
+        total = data.length;
+        totalPages = 1;
+      }
+      
       avaluos = data.map(item => ({
         id: item.id,
-        vehicle_appraisal_id: item.vehicle_appraisal_id || item.id, // Use vehicle_appraisal_id if available, otherwise use id
+        vehicle_appraisal_id: item.vehicle_appraisal_id || item.id,
         fecha: item.appraisal_date || '',
         cliente: item.applicant || '',
         vehiculo: `${item.brand || ''} ${item.vehicle_description || ''} ${item.model_year || ''}`.trim(),
@@ -48,10 +94,21 @@
         deduccion: item.deductions || '',
         cert: item.cert || ''
       }));
-      filteredAvaluos = [...avaluos];
-      updatePagination();
-    } catch (error) {
       
+      // Update pagination variables
+      filteredAvaluos = [...avaluos];
+      currentPage = page;
+      updatePageData();
+      
+      // Clear any previous search results to avoid duplicates
+      if (search) {
+        // If searching, we only want the current page results
+        filteredAvaluos = [...avaluos];
+      }
+      
+
+      
+    } catch (error) {
       // Provide more detailed error information
       let errorMessage = 'Error al cargar los avalúos.';
       
@@ -82,13 +139,13 @@
     }
 
     // Load avalúos data
-    await loadAvaluos();
+    await loadAvaluos(1, '');
 
     // Add visibility change listener to reload data when returning from other pages
     const handleVisibilityChange = () => {
       if (!document.hidden) {
         // Reload data when page becomes visible (user returns from create/edit)
-        loadAvaluos();
+        loadAvaluos(1, searchQuery);
       }
     };
 
@@ -100,46 +157,48 @@
     };
   });
 
-  // Filter avalúos based on search query
+  // Search avalúos using backend with debounce
   function handleSearch() {
-    if (!searchQuery.trim()) {
-      filteredAvaluos = [...avaluos];
-    } else {
-      const query = searchQuery.toLowerCase();
-      filteredAvaluos = avaluos.filter(avaluo => 
-        (avaluo.cliente && avaluo.cliente.toLowerCase().includes(query)) ||
-        (avaluo.vehiculo && avaluo.vehiculo.toLowerCase().includes(query)) ||
-        (avaluo.placa && avaluo.placa.toLowerCase().includes(query)) ||
-        (avaluo.color && avaluo.color.toLowerCase().includes(query)) ||
-        (avaluo.vin && avaluo.vin.toLowerCase().includes(query)) ||
-        (avaluo.vehicle_appraisal_id && avaluo.vehicle_appraisal_id.toString().includes(query)) ||
-        (avaluo.cert && avaluo.cert.toLowerCase().includes(query))
-      );
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
     }
     
-    // Reset to first page when searching
-    currentPage = 1;
-    updatePagination();
+    // Show searching indicator
+    isSearching = true;
+    
+    // Set new timeout for 500ms
+    searchTimeout = setTimeout(async () => {
+      // Reset to first page when searching
+      currentPage = 1;
+      await loadAvaluos(currentPage, searchQuery);
+      
+      // Hide searching indicator
+      isSearching = false;
+    }, 500);
   }
   
-  // Update pagination based on current filters
-  function updatePagination() {
-    totalPages = Math.ceil(filteredAvaluos.length / itemsPerPage);
-    updatePageData();
-  }
-  
-  // Update the current page data
+  // Update the current page data (now using backend pagination)
   function updatePageData() {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    paginatedAvaluos = filteredAvaluos.slice(startIndex, endIndex);
+    // With backend pagination, the data is already paginated
+    paginatedAvaluos = [...filteredAvaluos];
   }
   
-  // Go to specific page
-  function goToPage(page) {
-    if (page >= 1 && page <= totalPages) {
+  // Helper function to create array for pagination
+  function createPageArray(count) {
+    return Array.from({ length: count }, (_, i) => i + 1);
+  }
+  
+  // Go to specific page using backend
+  async function goToPage(page) {
+    if (page >= 1 && page <= totalPages && !isChangingPage) {
+      isChangingPage = true;
       currentPage = page;
-      updatePageData();
+      try {
+        await loadAvaluos(page, searchQuery);
+      } finally {
+        isChangingPage = false;
+      }
     }
   }
 
@@ -242,7 +301,7 @@
       <h1 class="text-2xl font-bold text-gray-800">Gestión de Avalúos</h1>
       <div class="flex gap-2">
         <button 
-          on:click={loadAvaluos}
+          on:click={() => loadAvaluos(1, searchQuery)}
           disabled={isLoading}
           class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
         >
@@ -263,25 +322,27 @@
       </div>
     </div>
 
-    <!-- Search and filters -->
+        <!-- Search and filters -->
     <div class="bg-white rounded-lg shadow p-4 mb-6">
-      <div class="flex flex-col md:flex-row gap-4">
-        <div class="flex-1">
-          <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Buscar Avalúos</label>
-          <div class="relative">
-            <input
-              id="search"
-              type="text"
-              bind:value={searchQuery}
-              on:input={handleSearch}
-              placeholder="Buscar por cliente, vehículo, placa, color, VIN, número de certificado o cert..."
-              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
-            />
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      <div class="flex-1">
+        <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Buscar Avalúos</label>
+        <div class="relative">
+          <input
+            id="search"
+            type="text"
+            bind:value={searchQuery}
+            on:input={handleSearch}
+            placeholder="Buscar por placa, cliente, vehículo, VIN, certificado..."
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
+          />
+          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            {#if isSearching}
+              <div class="animate-spin h-5 w-5 border-b-2 border-blue-600 rounded-full"></div>
+            {:else}
               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                 <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
               </svg>
-            </div>
+            {/if}
           </div>
         </div>
       </div>
@@ -350,54 +411,99 @@
         </div>
         
         <!-- Pagination controls -->
+
+        
         {#if totalPages > 1}
           <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200">
             <div class="flex-1 flex justify-between sm:hidden">
-              <button 
-                on:click={() => goToPage(currentPage - 1)} 
-                disabled={currentPage === 1}
-                class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Anterior
-              </button>
-              <button 
-                on:click={() => goToPage(currentPage + 1)} 
-                disabled={currentPage === totalPages}
-                class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Siguiente
-              </button>
+              <div class="flex items-center space-x-2">
+                <label for="itemsPerPageMobile" class="text-xs text-gray-700">Registros:</label>
+                <select
+                  id="itemsPerPageMobile"
+                  bind:value={itemsPerPage}
+                  on:change={() => loadAvaluos(1, searchQuery)}
+                  class="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+              <div class="flex space-x-2">
+                <button 
+                  on:click={() => goToPage(currentPage - 1)} 
+                  disabled={currentPage === 1 || isChangingPage}
+                  class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {#if isChangingPage}
+                    <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full mr-2"></div>
+                  {/if}
+                  Anterior
+                </button>
+                <button 
+                  on:click={() => goToPage(currentPage + 1)} 
+                  disabled={currentPage === totalPages || isChangingPage}
+                  class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {#if isChangingPage}
+                    <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full mr-2"></div>
+                  {/if}
+                  Siguiente
+                </button>
+              </div>
             </div>
             <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p class="text-sm text-gray-700">
-                  Mostrando <span class="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span class="font-medium">{Math.min(currentPage * itemsPerPage, filteredAvaluos.length)}</span> de <span class="font-medium">{filteredAvaluos.length}</span> resultados
-                </p>
+              <div class="flex items-center space-x-4">
+                <div>
+                  <p class="text-sm text-gray-700">
+                    Mostrando <span class="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span class="font-medium">{Math.min(currentPage * itemsPerPage, filteredAvaluos.length)}</span> de <span class="font-medium">{total}</span> resultados
+                  </p>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <label for="itemsPerPage" class="text-sm text-gray-700">Registros:</label>
+                  <select
+                    id="itemsPerPage"
+                    bind:value={itemsPerPage}
+                    on:change={() => loadAvaluos(1, searchQuery)}
+                    class="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
               </div>
               <div>
                 <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                   <!-- Previous page button -->
                   <button
                     on:click={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
+                    disabled={currentPage === 1 || isChangingPage}
                     class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span class="sr-only">Anterior</span>
-                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                    </svg>
+                    {#if isChangingPage}
+                      <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full"></div>
+                    {:else}
+                      <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                    {/if}
                   </button>
                   
                   <!-- Page numbers -->
-                  {#each Array(totalPages) as _, i}
-                    {#if i + 1 === currentPage || i + 1 === 1 || i + 1 === totalPages || (i + 1 >= currentPage - 1 && i + 1 <= currentPage + 1)}
+                  {#each createPageArray(totalPages) as pageNum}
+                    {#if pageNum === currentPage || pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)}
                       <button
-                        on:click={() => goToPage(i + 1)}
-                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {currentPage === i + 1 ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}"
+                        on:click={() => goToPage(pageNum)}
+                        disabled={isChangingPage}
+                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {currentPage === pageNum ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'} disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {i + 1}
+                        {pageNum}
                       </button>
-                    {:else if i + 1 === currentPage - 2 || i + 1 === currentPage + 2}
+                    {:else if pageNum === currentPage - 2 || pageNum === currentPage + 2}
                       <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
                         ...
                       </span>
@@ -407,13 +513,17 @@
                   <!-- Next page button -->
                   <button
                     on:click={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
+                    disabled={currentPage === totalPages || isChangingPage}
                     class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span class="sr-only">Siguiente</span>
-                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                    </svg>
+                    {#if isChangingPage}
+                      <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full"></div>
+                    {:else}
+                      <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                      </svg>
+                    {/if}
                   </button>
                 </nav>
               </div>
