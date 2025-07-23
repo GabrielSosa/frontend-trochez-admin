@@ -61,7 +61,7 @@
   }
 
   function addDeduction() {
-    if (formData.deductions.length < 5) {
+    if (formData.deductions.length < 9) { // Cambia el límite aquí
       formData.deductions = [...formData.deductions, { description: '', amount: null }];
     }
   }
@@ -420,7 +420,7 @@
       </div>
     {/if}
 
-    {#if formData.deductions.length < 5}
+    {#if formData.deductions.length < 9} <!-- Cambia el límite aquí -->
       <button 
         type="button" 
         on:click={addDeduction} 
@@ -429,7 +429,7 @@
         Agregar Deducción
       </button>
     {:else}
-       <p class="text-sm text-gray-500 mt-4">Máximo de 5 deducciones alcanzado.</p>
+       <p class="text-sm text-gray-500 mt-4">Máximo de 9 deducciones alcanzado.</p>
     {/if}
   </div>
 
