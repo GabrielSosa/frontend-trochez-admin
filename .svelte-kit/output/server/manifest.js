@@ -10,7 +10,7 @@ return {
 	assets: new Set([".DS_Store","favicon.png","images/favicon.png","images/logo.png"]),
 	mimeTypes: {".png":"image/png"},
 	_: {
-		client: {start:"_app/immutable/entry/start.Iqzha_22.js",app:"_app/immutable/entry/app.JwTg5Pyz.js",imports:["_app/immutable/entry/start.Iqzha_22.js","_app/immutable/chunks/D73rw0UH.js","_app/immutable/chunks/CnbjcvQe.js","_app/immutable/entry/app.JwTg5Pyz.js","_app/immutable/chunks/CnbjcvQe.js","_app/immutable/chunks/IHki7fMi.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
+		client: {start:"_app/immutable/entry/start.DDlhAZpO.js",app:"_app/immutable/entry/app.Ct-kmscp.js",imports:["_app/immutable/entry/start.DDlhAZpO.js","_app/immutable/chunks/CZYdmkq_.js","_app/immutable/chunks/CnbjcvQe.js","_app/immutable/entry/app.Ct-kmscp.js","_app/immutable/chunks/CnbjcvQe.js","_app/immutable/chunks/IHki7fMi.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),

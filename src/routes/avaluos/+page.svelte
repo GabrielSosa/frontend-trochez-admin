@@ -233,7 +233,7 @@
     }).format(date);
   }
   
-  // Open certificate with JWT token
+  // Open certificate with JWT token - Improved to avoid popup blockers
   async function openCertificate(avaluoId) {
     try {
       const token = localStorage.getItem('jwtToken');
@@ -255,7 +255,6 @@
         }
       });
       
-      
       if (!response.ok) {
         throw new Error(`Error al obtener el certificado: ${response.status} ${response.statusText}`);
       }
@@ -267,12 +266,52 @@
         // Handle PDF response
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
+        
+        // Try multiple methods to open the PDF
+        try {
+          // Method 1: Try window.open first
+          const newWindow = window.open(url, '_blank');
+          
+          // Check if popup was blocked
+          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            // Method 2: Create a temporary link and click it
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.download = `certificado_${avaluoId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Show user message
+            setTimeout(() => {
+              alert('El certificado se está descargando. Si no se abrió automáticamente, revisa tu carpeta de descargas.');
+            }, 100);
+          }
+        } catch (popupError) {
+          // Method 3: Fallback to download
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `certificado_${avaluoId}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          alert('El certificado se está descargando. Revisa tu carpeta de descargas.');
+        }
       } else if (contentType && contentType.includes('application/json')) {
         // Handle JSON response (might contain a URL or error)
         const data = await response.json();
         if (data.url) {
-          window.open(data.url, '_blank');
+          try {
+            const newWindow = window.open(data.url, '_blank');
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+              // Fallback: open in same window
+              window.location.href = data.url;
+            }
+          } catch (popupError) {
+            window.location.href = data.url;
+          }
         } else {
           throw new Error(data.message || 'Error al generar el certificado');
         }
@@ -280,10 +319,28 @@
         // Handle other response types
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        window.open(url, '_blank');
+        
+        try {
+          const newWindow = window.open(url, '_blank');
+          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.download = `certificado_${avaluoId}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
+        } catch (popupError) {
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `certificado_${avaluoId}.pdf`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
       }
     } catch (error) {
-      
       alert(`Error al obtener el certificado: ${error.message}`);
     } finally {
       // Ensure generating flag is reset
