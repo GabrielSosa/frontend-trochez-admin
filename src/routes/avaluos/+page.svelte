@@ -3,6 +3,8 @@
   import { goto } from '$app/navigation';
   import Navbar from '$lib/components/Navbar.svelte';
   import { ApiUrls, apiFetch } from '$lib/api';
+  import { showSuccess, showError, showInfo } from '$lib/utils/toast.js';
+  import { confirmDuplicate, confirmDelete } from '$lib/utils/confirm.js';
 
   let user = null;
   let searchQuery = '';
@@ -21,6 +23,12 @@
   let generatingCertificate = false;
   let generatingCertificateId = null;
   let isChangingPage = false;
+  let duplicatingAvaluo = false;
+  let duplicatingAvaluoId = null;
+  let deletingAvaluo = false;
+  let deletingAvaluoId = null;
+  
+
 
 
   // Function to load avalúos data with backend pagination
@@ -121,7 +129,7 @@
       }
       
       // Provide some feedback to the user
-      alert(errorMessage);
+      notifications.error(errorMessage);
     } finally {
       isLoading = false;
     }
@@ -233,12 +241,140 @@
     }).format(date);
   }
   
+  // Duplicate avalúo function
+  async function showDuplicateConfirmDialog(avaluoId) {
+    const confirmed = await confirmDuplicate();
+    if (confirmed) {
+      executeDuplicate(avaluoId);
+    }
+  }
+
+  async function executeDuplicate(avaluoId) {
+    try {
+      // Set loading state
+      duplicatingAvaluo = true;
+      duplicatingAvaluoId = avaluoId;
+      
+      // Start safety timeout
+      resetStuckStates();
+
+      const token = localStorage.getItem('jwtToken');
+      if (!token) {
+        showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
+        setTimeout(() => goto('/login'), 1000);
+        return;
+      }
+
+      const response = await fetch(`${ApiUrls.AVALUOS.getAll}/${avaluoId}/duplicate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al duplicar el avalúo: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.vehicle_appraisal_id) {
+        showSuccess('Avalúo duplicado exitosamente');
+        // Redirect to edit page with the new ID
+        goto(`/avaluos/${data.vehicle_appraisal_id}/editar`);
+      } else {
+        throw new Error('No se recibió el ID del avalúo duplicado');
+      }
+    } catch (error) {
+      showError(`Error al duplicar el avalúo: ${error.message}`);
+      // Ensure states are reset even on error
+      duplicatingAvaluo = false;
+      duplicatingAvaluoId = null;
+    } finally {
+      // Reset loading state
+      duplicatingAvaluo = false;
+      duplicatingAvaluoId = null;
+    }
+  }
+
+  // Delete avalúo function
+  async function showDeleteConfirmDialog(avaluoId) {
+    const confirmed = await confirmDelete();
+    if (confirmed) {
+      executeDelete(avaluoId);
+    }
+  }
+  
+  // Safety timeout to reset states if they get stuck
+  function resetStuckStates() {
+    setTimeout(() => {
+      if (deletingAvaluo) {
+        deletingAvaluo = false;
+        deletingAvaluoId = null;
+        console.warn('Reset stuck deleting state');
+      }
+      if (duplicatingAvaluo) {
+        duplicatingAvaluo = false;
+        duplicatingAvaluoId = null;
+        console.warn('Reset stuck duplicating state');
+      }
+      if (generatingCertificate) {
+        generatingCertificate = false;
+        generatingCertificateId = null;
+        console.warn('Reset stuck generating certificate state');
+      }
+    }, 10000); // 10 seconds timeout
+  }
+
+  async function executeDelete(avaluoId) {
+    try {
+      // Set loading state
+      deletingAvaluo = true;
+      deletingAvaluoId = avaluoId;
+      
+      // Start safety timeout
+      resetStuckStates();
+
+      const token = localStorage.getItem('jwtToken');
+      if (!token) {
+        showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
+        setTimeout(() => goto('/login'), 1000);
+        return;
+      }
+
+      const response = await fetch(`${ApiUrls.AVALUOS.getAll}/${avaluoId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Error al eliminar el avalúo: ${response.status} ${response.statusText}`);
+      }
+
+      // Refresh the list
+      await loadAvaluos(currentPage, searchQuery);
+      showSuccess('Avalúo eliminado exitosamente');
+    } catch (error) {
+      showError(`Error al eliminar el avalúo: ${error.message}`);
+      // Ensure states are reset even on error
+      deletingAvaluo = false;
+      deletingAvaluoId = null;
+    } finally {
+      // Reset loading state
+      deletingAvaluo = false;
+      deletingAvaluoId = null;
+    }
+  }
+
   // Open certificate with JWT token - Improved to avoid popup blockers
   async function openCertificate(avaluoId) {
     try {
       const token = localStorage.getItem('jwtToken');
       if (!token) {
-        alert('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
+        showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
         setTimeout(() => goto('/login'), 1000);
         return;
       }
@@ -246,6 +382,9 @@
       // Set generating flag
       generatingCertificate = true;
       generatingCertificateId = avaluoId;
+      
+      // Start safety timeout
+      resetStuckStates();
       
       // Make a fetch request with the JWT token in the Authorization header
       const response = await fetch(ApiUrls.CERTIFICADOS.get(avaluoId), {
@@ -285,7 +424,7 @@
             
             // Show user message
             setTimeout(() => {
-              alert('El certificado se está descargando. Si no se abrió automáticamente, revisa tu carpeta de descargas.');
+              showInfo('El certificado se está descargando. Si no se abrió automáticamente, revisa tu carpeta de descargas.');
             }, 100);
           }
         } catch (popupError) {
@@ -297,7 +436,7 @@
           link.click();
           document.body.removeChild(link);
           
-          alert('El certificado se está descargando. Revisa tu carpeta de descargas.');
+          showInfo('El certificado se está descargando. Revisa tu carpeta de descargas.');
         }
       } else if (contentType && contentType.includes('application/json')) {
         // Handle JSON response (might contain a URL or error)
@@ -341,7 +480,7 @@
         }
       }
     } catch (error) {
-      alert(`Error al obtener el certificado: ${error.message}`);
+      showError(`Error al obtener el certificado: ${error.message}`);
     } finally {
       // Ensure generating flag is reset
       generatingCertificate = false;
@@ -447,19 +586,67 @@
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(avaluo.valor)}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.color}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href={`/avaluos/${avaluo.vehicle_appraisal_id}/editar`} class="text-indigo-600 hover:text-indigo-900 mr-3">Editar</a>
-                    <button 
-                      on:click={() => openCertificate(avaluo.vehicle_appraisal_id)} 
-                      class="text-green-600 hover:text-green-900 bg-transparent border-none p-0 cursor-pointer text-sm font-medium inline-flex items-center"
-                      disabled={generatingCertificate}
-                    >
-                      {#if generatingCertificate && generatingCertificateId === avaluo.vehicle_appraisal_id}
-                        <div class="animate-spin h-4 w-4 border-b-2 border-green-600 rounded-full mr-2"></div>
-                        Generando...
-                      {:else}
-                        Certificado
-                      {/if}
-                    </button>
+                    <div class="flex items-center justify-end space-x-2">
+                      <!-- Editar -->
+                      <a 
+                        href={`/avaluos/${avaluo.vehicle_appraisal_id}/editar`} 
+                        class="p-2 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-full transition-colors duration-200 {duplicatingAvaluo || deletingAvaluo || generatingCertificate ? 'opacity-50 pointer-events-none' : ''}"
+                        title="Editar avalúo"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                      </a>
+                      
+                      <!-- Duplicar -->
+                      <button 
+                        on:click={() => showDuplicateConfirmDialog(avaluo.vehicle_appraisal_id)}
+                        class="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-full transition-colors duration-200"
+                        disabled={duplicatingAvaluo}
+                        title="Duplicar avalúo"
+                      >
+                        {#if duplicatingAvaluo && duplicatingAvaluoId === avaluo.vehicle_appraisal_id}
+                          <div class="animate-spin h-4 w-4 border-b-2 border-blue-600 rounded-full"></div>
+                        {:else}
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                          </svg>
+                        {/if}
+                      </button>
+                      
+                      <!-- Certificado -->
+                      <button 
+                        on:click={() => openCertificate(avaluo.vehicle_appraisal_id)} 
+                        class="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-full transition-colors duration-200"
+                        disabled={generatingCertificate || duplicatingAvaluo || deletingAvaluo}
+                        title="Imprimir certificado"
+                      >
+                        {#if generatingCertificate && generatingCertificateId === avaluo.vehicle_appraisal_id}
+                          <div class="animate-spin h-4 w-4 border-b-2 border-green-600 rounded-full"></div>
+                        {:else}
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
+                          </svg>
+                        {/if}
+                      </button>
+                      
+                      <!-- Eliminar -->
+                      <button 
+                        on:click={() => showDeleteConfirmDialog(avaluo.vehicle_appraisal_id)}
+                        class="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-full transition-colors duration-200"
+                        disabled={deletingAvaluo}
+                        title="Eliminar avalúo"
+                      >
+                        {#if deletingAvaluo && deletingAvaluoId === avaluo.vehicle_appraisal_id}
+                          <div class="animate-spin h-4 w-4 border-b-2 border-red-600 rounded-full"></div>
+                        {:else}
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                          </svg>
+                        {/if}
+                      </button>
+                    </div>
                   </td>
                 </tr>
               {/each}
@@ -591,6 +778,8 @@
     </div>
   </main>
 </div>
+
+
 
 <style>
   /* Estilos personalizados para el scrollbar */

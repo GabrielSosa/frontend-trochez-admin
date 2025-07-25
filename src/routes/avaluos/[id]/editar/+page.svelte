@@ -5,6 +5,8 @@
   import Navbar from '$lib/components/Navbar.svelte';
   import AvaluoForm from '$lib/components/AvaluoForm.svelte'; 
   import { ApiUrls, apiFetch } from '$lib/api';
+  import { showSuccess, showError, showInfo } from '$lib/utils/toast.js';
+  import { confirmCancel } from '$lib/utils/confirm.js';
   // Import the new function along with the others
   import { validateAvaluoFormData, cleanAvaluoFormData, getDefaultAvaluoFormData } from '$lib/utils/avaluoUtils.js';
 
@@ -158,19 +160,22 @@
   }
 
   // Handle cancel event from AvaluoForm
-  function handleCancel() {
-    goto('/avaluos');
+  async function handleCancel() {
+    const confirmed = await confirmCancel();
+    if (confirmed) {
+      goto('/avaluos');
+    }
   }
 
   // Función para imprimir certificado - Mejorada para evitar bloqueadores de ventanas emergentes
   async function printCertificate(avaluoId) {
     try {
-      const token = localStorage.getItem('jwtToken');
-      if (!token) {
-        alert('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
-        setTimeout(() => goto('/login'), 1000);
-        return;
-      }
+              const token = localStorage.getItem('jwtToken');
+        if (!token) {
+          showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
+          setTimeout(() => goto('/login'), 1000);
+          return;
+        }
       
       // Set generating flag
       generatingCertificate = true;
@@ -214,7 +219,7 @@
             
             // Show user message
             setTimeout(() => {
-              alert('El certificado se está descargando. Si no se abrió automáticamente, revisa tu carpeta de descargas.');
+              showInfo('El certificado se está descargando. Si no se abrió automáticamente, revisa tu carpeta de descargas.');
             }, 100);
           }
         } catch (popupError) {
@@ -226,7 +231,7 @@
           link.click();
           document.body.removeChild(link);
           
-          alert('El certificado se está descargando. Revisa tu carpeta de descargas.');
+          showInfo('El certificado se está descargando. Revisa tu carpeta de descargas.');
         }
       } else if (contentType && contentType.includes('application/json')) {
         // Handle JSON response (might contain a URL or error)
@@ -269,13 +274,13 @@
           document.body.removeChild(link);
         }
       }
-    } catch (error) {
-      alert(`Error al obtener el certificado: ${error.message}`);
-    } finally {
-      // Ensure generating flag is reset
-      generatingCertificate = false;
-      generatingCertificateId = null;
-    }
+          } catch (error) {
+        showError(`Error al obtener el certificado: ${error.message}`);
+      } finally {
+        // Ensure generating flag is reset
+        generatingCertificate = false;
+        generatingCertificateId = null;
+      }
   }
 </script>
 
