@@ -23,3 +23,25 @@ declare module "svelte/elements" {
 }
 
 export {};
+
+
+declare module "$app/types" {
+	export interface AppTypes {
+		RouteId(): "/" | "/avaluos" | "/avaluos/nuevo" | "/avaluos/[id]" | "/avaluos/[id]/editar" | "/login";
+		RouteParams(): {
+			"/avaluos/[id]": { id: string };
+			"/avaluos/[id]/editar": { id: string }
+		};
+		LayoutParams(): {
+			"/": { id?: string };
+			"/avaluos": { id?: string };
+			"/avaluos/nuevo": Record<string, never>;
+			"/avaluos/[id]": { id: string };
+			"/avaluos/[id]/editar": { id: string };
+			"/login": Record<string, never>
+		};
+		Pathname(): "/" | "/avaluos" | "/avaluos/" | "/avaluos/nuevo" | "/avaluos/nuevo/" | `/avaluos/${string}` & {} | `/avaluos/${string}/` & {} | `/avaluos/${string}/editar` & {} | `/avaluos/${string}/editar/` & {} | "/login" | "/login/";
+		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
+		Asset(): "/.DS_Store" | "/favicon.png" | "/images/favicon.png" | "/images/logo.png" | string & {};
+	}
+}

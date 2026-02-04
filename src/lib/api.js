@@ -26,7 +26,8 @@ export class ApiUrls {
     getById: (id) => `${API_BASE_URL}/api/appraisals/${id}`,
     create: `${API_BASE_URL}/api/appraisals`,
     update: (id) => `${API_BASE_URL}/api/appraisals/${id}`,
-    delete: (id) => `${API_BASE_URL}/api/appraisals/${id}`
+    delete: (id) => `${API_BASE_URL}/api/appraisals/${id}`,
+    search: `${API_BASE_URL}/api/appraisals/search`
   };
 
   // URLs para CERTIFICADOS

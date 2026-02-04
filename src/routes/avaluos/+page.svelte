@@ -46,7 +46,7 @@
           page: page.toString(),
           limit: itemsPerPage.toString()
         });
-        url = `https://api-backend-trochez.onrender.com/api/appraisals/search?${params}`;
+        url = `${ApiUrls.AVALUOS.search}?${params}`;
       } else {
         // Use regular endpoint
         params = new URLSearchParams({
