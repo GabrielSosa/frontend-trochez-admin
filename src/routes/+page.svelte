@@ -162,13 +162,19 @@
       <h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
       <p class="text-sm text-muted-foreground">Resumen de la actividad mensual y diaria</p>
     </div>
-    <Button variant="outline" onclick={refresh} disabled={isLoading}>
+    <Button
+      variant="outline"
+      size="icon"
+      onclick={refresh}
+      disabled={isLoading}
+      title="Actualizar"
+      aria-label="Actualizar"
+    >
       {#if isLoading}
         <Spinner size={14} />
       {:else}
         <RefreshCw size={14} />
       {/if}
-      Actualizar
     </Button>
   </div>
 

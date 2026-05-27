@@ -274,8 +274,9 @@
           <RefreshCw size={14} />
         {/if}
       </Button>
-      <Button href="/avaluos/nuevo">
-        <Plus size={16} /> Nuevo avalúo
+      <Button href="/avaluos/nuevo" class="shadow-sm shadow-primary/20 hover:shadow-md hover:shadow-primary/25">
+        <Plus size={16} />
+        Nuevo avalúo
       </Button>
     </div>
   </div>

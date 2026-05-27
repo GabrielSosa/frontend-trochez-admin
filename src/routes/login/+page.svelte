@@ -50,7 +50,7 @@
 
 <div class="grid min-h-screen lg:grid-cols-2">
   <!-- Left: hero panel -->
-  <div class="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary to-blue-700 p-10 text-primary-foreground">
+  <div class="hidden lg:flex flex-col justify-between bg-gradient-to-br from-[hsl(9_49%_57%)] via-[hsl(15_55%_52%)] to-[hsl(20_50%_42%)] p-10 text-white">
     <div class="flex items-center gap-3">
       <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/10 backdrop-blur font-bold">T</div>
       <span class="text-lg font-semibold tracking-tight">Avalúos Trochez</span>
