@@ -8,7 +8,8 @@
   import { showSuccess, showError } from '$lib/utils/toast.js';
   import { confirmDelete, confirmDuplicate, confirmAction } from '$lib/utils/confirm.js';
   import { printCertificate } from '$lib/utils/certificate.js';
-  import Papa from 'papaparse';
+  // Papa Parse is loaded on demand inside exportCSV() — keeps it out of
+  // the initial bundle for the most-visited page.
   import {
     Plus,
     RefreshCw,
@@ -262,12 +263,13 @@
     }
   }
 
-  function exportCSV(scope = 'page') {
+  async function exportCSV(scope = 'page') {
     const rows = scope === 'selection' ? s.items.filter((r) => selected.has(r.vehicle_appraisal_id)) : s.items;
     if (!rows.length) {
       showError('No hay registros para exportar');
       return;
     }
+    const { default: Papa } = await import('papaparse');
     const data = rows.map((r) => ({
       ID: r.vehicle_appraisal_id,
       Certificado: r.cert ?? '',

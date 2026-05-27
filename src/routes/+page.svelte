@@ -1,8 +1,6 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { Chart, registerables } from 'chart.js';
-  import { Bar, Line, Pie } from 'svelte-chartjs';
   import { ApiUrls, apiJson } from '$lib/api.js';
   import { auth } from '$lib/stores/auth.svelte.js';
   import { formatCRC } from '$lib/utils.js';
@@ -16,7 +14,9 @@
   import Spinner from '$lib/components/ui/Spinner.svelte';
   import Badge from '$lib/components/ui/Badge.svelte';
 
-  Chart.register(...registerables);
+  // Chart.js + svelte-chartjs are pulled in lazily inside DashboardCharts.svelte
+  // so they don't bloat the bundle of the other routes (especially /avaluos).
+  const ChartsPromise = import('$lib/components/DashboardCharts.svelte');
 
   let isLoading = $state(true);
   let errorDashboard = $state('');
@@ -232,59 +232,22 @@
     </Card>
   </div>
 
-  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-    <Card>
-      <CardHeader>
-        <CardTitle>Avalúos del día</CardTitle>
-        <p class="text-sm text-muted-foreground">Valor en CRC por registro</p>
-      </CardHeader>
-      <CardContent>
-        <div class="h-64">
-          {#if isLoading}
-            <div class="flex h-full items-center justify-center"><Spinner /></div>
-          {:else if dailySalesData?.labels.length}
-            <Bar data={dailySalesData} options={chartCommon} />
-          {:else}
-            <p class="flex h-full items-center justify-center text-sm text-muted-foreground">Sin datos para hoy</p>
-          {/if}
-        </div>
-      </CardContent>
-    </Card>
-
-    <Card>
-      <CardHeader>
-        <CardTitle>Avalúos por día (mes)</CardTitle>
-        <p class="text-sm text-muted-foreground">Cantidad de registros diarios</p>
-      </CardHeader>
-      <CardContent>
-        <div class="h-64">
-          {#if isLoading}
-            <div class="flex h-full items-center justify-center"><Spinner /></div>
-          {:else if monthlySalesData?.labels.length}
-            <Line data={monthlySalesData} options={chartCommon} />
-          {:else}
-            <p class="flex h-full items-center justify-center text-sm text-muted-foreground">Sin datos para el mes</p>
-          {/if}
-        </div>
-      </CardContent>
-    </Card>
-  </div>
-
-  <Card>
-    <CardHeader>
-      <CardTitle>Vehículos con más avalúos</CardTitle>
-      <p class="text-sm text-muted-foreground">Top 5 del mes</p>
-    </CardHeader>
-    <CardContent>
-      <div class="mx-auto h-72 max-w-md">
-        {#if isLoading}
-          <div class="flex h-full items-center justify-center"><Spinner /></div>
-        {:else if topCarsData?.labels.length}
-          <Pie data={topCarsData} options={pieOptions} />
-        {:else}
-          <p class="flex h-full items-center justify-center text-sm text-muted-foreground">Sin datos</p>
-        {/if}
-      </div>
-    </CardContent>
-  </Card>
+  {#if isLoading}
+    <div class="flex h-64 items-center justify-center"><Spinner /></div>
+  {:else}
+    {#await ChartsPromise}
+      <div class="flex h-64 items-center justify-center"><Spinner /></div>
+    {:then mod}
+      {@const Charts = mod.default}
+      <Charts
+        {dailySalesData}
+        {monthlySalesData}
+        {topCarsData}
+        {chartCommon}
+        {pieOptions}
+      />
+    {:catch}
+      <p class="text-sm text-muted-foreground">No se pudieron cargar los gráficos.</p>
+    {/await}
+  {/if}
 </div>
