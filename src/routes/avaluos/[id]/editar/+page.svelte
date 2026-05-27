@@ -27,6 +27,7 @@
   let loadError = $state('');
 
   onMount(async () => {
+    auth.hydrate();
     if (!auth.isAuthenticated) {
       goto('/login');
       return;

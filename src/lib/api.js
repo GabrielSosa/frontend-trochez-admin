@@ -73,10 +73,24 @@ export async function apiJson(url, options = {}) {
 
   if (res.status === 401) {
     if (typeof window !== 'undefined') {
+      const reason = (data && (data.detail || data.message)) || 'sesión inválida';
+      // Surface enough context to debug spurious logouts. The user reported
+      // being kicked back to /login at random intervals; logging the URL +
+      // backend reason makes it easy to spot which request triggered it.
+      console.warn('[apiJson] 401', { url, reason, data });
+      try {
+        const { toast } = await import('svelte-sonner');
+        toast.error(`Sesión cerrada: ${reason}`, { duration: 4000 });
+      } catch {
+        /* ignore — sonner may not be initialised yet */
+      }
       localStorage.removeItem('jwtToken');
       localStorage.removeItem('userData');
       if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
+        // Give the toast a moment to render before navigating.
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1200);
       }
     }
   }

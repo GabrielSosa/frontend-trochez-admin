@@ -65,6 +65,7 @@
   });
 
   onMount(() => {
+    auth.hydrate();
     if (!auth.isAuthenticated) {
       goto('/login');
       return;
