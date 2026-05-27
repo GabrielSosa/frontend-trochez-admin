@@ -28,7 +28,7 @@ export function validateAvaluoFormData(formData, isEdit = false) {
 
 /**
  * Cleans and prepares the avaluo form data for API submission.
- * Maps form deduction shape {description, amount} → API shape {deduction_name, deduction_value}.
+ * Deductions use {description, amount} — the same shape the API expects.
  */
 export function cleanAvaluoFormData(formData) {
   const cleanedData = { ...formData };
@@ -49,15 +49,13 @@ export function cleanAvaluoFormData(formData) {
   cleanedData.discounts = Number(cleanedData.discounts) || 0;
   cleanedData.bank_value_in_dollars = Number(cleanedData.bank_value_in_dollars) || 0;
 
-  // Map form deductions {description, amount} → API format {deduction_name, deduction_value}
   if (cleanedData.deductions && Array.isArray(cleanedData.deductions)) {
     cleanedData.deductions = cleanedData.deductions
       .map(d => ({
-        deduction_name: d.description || d.deduction_name || '',
-        deduction_value: Number(d.amount ?? d.deduction_value) || 0,
-        deduction_percentage: d.deduction_percentage || null
+        description: d.description || '',
+        amount: Number(d.amount) || 0,
       }))
-      .filter(d => d.deduction_name || d.deduction_value > 0);
+      .filter(d => d.description || d.amount > 0);
   } else {
     cleanedData.deductions = [];
   }
@@ -67,7 +65,6 @@ export function cleanAvaluoFormData(formData) {
 
 /**
  * Maps API response data to form data structure.
- * Maps API deduction shape {deduction_name, deduction_value} → form shape {description, amount}.
  */
 export function mapApiDataToFormData(apiData) {
   return {
@@ -103,11 +100,10 @@ export function mapApiDataToFormData(apiData) {
     bank_value_in_dollars: apiData.bank_value_in_dollars || 0,
     referencia_original: apiData.referencia_original || '',
     cert: apiData.cert || '',
-    // Map API deductions {deduction_name, deduction_value} → form {description, amount}
     deductions: (apiData.deductions || []).map(d => ({
-      description: d.deduction_name || '',
-      amount: d.deduction_value ?? null
-    }))
+      description: d.description || '',
+      amount: d.amount ?? null,
+    })),
   };
 }
 
