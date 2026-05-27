@@ -56,28 +56,28 @@
         url = `${ApiUrls.AVALUOS.getAll}?${params}`;
       }
       
-      const response = await apiFetch(url);
-      
-      // Handle different response formats
-      let data;
-      
-      if (response.data && response.pagination) {
-        // New format with pagination metadata
-        data = response.data;
-        total = response.pagination.total_count;
-        totalPages = response.pagination.total_pages;
+const httpResponse = await apiFetch(url);
+        const response = await httpResponse.json();
 
-      } else if (response.avaluos && response.total !== undefined) {
-        // Alternative format with pagination metadata
-        data = response.avaluos;
-        total = response.total;
-        totalPages = response.totalPages || Math.ceil(total / itemsPerPage);
-      } else {
-        // Fallback to old format
-        data = response;
-        total = data.length;
-        totalPages = 1;
-      }
+        // New API format: { items, total, skip, limit }
+        let data;
+        if (Array.isArray(response.items)) {
+          data = response.items;
+          total = response.total ?? data.length;
+          totalPages = Math.ceil(total / itemsPerPage);
+        } else if (response.data && response.pagination) {
+          data = response.data;
+          total = response.pagination.total_count;
+          totalPages = response.pagination.total_pages;
+        } else if (response.avaluos && response.total !== undefined) {
+          data = response.avaluos;
+          total = response.total;
+          totalPages = response.totalPages || Math.ceil(total / itemsPerPage);
+        } else {
+          data = Array.isArray(response) ? response : [];
+          total = data.length;
+          totalPages = 1;
+        }
       
       avaluos = data.map(item => ({
         id: item.id,
