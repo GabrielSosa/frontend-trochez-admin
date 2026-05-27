@@ -17,20 +17,17 @@
   let isLoginPage = $derived($page.url.pathname === '/login');
 
   onMount(() => {
-    // Persist collapsed state per browser
+    auth.hydrate();
     const saved = localStorage.getItem('sidebarCollapsed');
     if (saved === '1') collapsed = true;
+    if (!auth.isAuthenticated && !isLoginPage) {
+      goto('/login');
+    }
   });
 
   $effect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0');
-    }
-  });
-
-  onMount(() => {
-    if (!auth.isAuthenticated && !isLoginPage) {
-      goto('/login');
     }
   });
 </script>
