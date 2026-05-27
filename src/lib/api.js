@@ -41,7 +41,7 @@ export class ApiUrls {
 
 export const apiFetch = async (url, options = {}) => {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  const token = localStorage.getItem('access_token');
+  const token = localStorage.getItem('jwtToken');
   if (token) headers['Authorization'] = 'Bearer ' + token;
   return await fetch(url, { ...options, headers });
 };
