@@ -35,7 +35,14 @@ export function cleanAvaluoFormData(formData) {
 
   cleanedData.model_year = Number(cleanedData.model_year) || null;
   cleanedData.mileage = Number(cleanedData.mileage) || 0;
-  cleanedData.engine_size = Number(cleanedData.engine_size) || null;
+  // engine_size in the DB is NUMERIC(3,1) → max 99.9. If the user typed cc
+  // (e.g. 1500 / 2500) we convert to litres automatically so the insert
+  // doesn't 500 with "numeric field overflow".
+  {
+    let es = Number(cleanedData.engine_size);
+    if (Number.isFinite(es) && es > 99) es = es / 1000;
+    cleanedData.engine_size = Number.isFinite(es) && es > 0 ? Math.round(es * 10) / 10 : null;
+  }
   cleanedData.appraisal_value_usd = Number(cleanedData.appraisal_value_usd) || 0;
   cleanedData.appraisal_value_trochez = Number(cleanedData.appraisal_value_trochez) || 0;
   cleanedData.apprasail_value_bank = Number(cleanedData.apprasail_value_bank) || 0;

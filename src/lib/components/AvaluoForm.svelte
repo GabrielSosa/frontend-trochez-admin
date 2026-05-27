@@ -218,14 +218,16 @@
         <SpellInput id="fuel_type" bind:value={formData.fuel_type} placeholder="Diesel" />
       </div>
       <div class="space-y-1.5">
-        <Label for="engine_size">Cilindraje</Label>
+        <Label for="engine_size">Cilindraje <span class="text-muted-foreground font-normal">(litros)</span></Label>
         <Input
           id="engine_size"
           type="number"
           min="0"
+          max="9.9"
           step="0.1"
           bind:value={formData.engine_size}
           placeholder="2.5"
+          title="Ingresá en litros (ej. 2.5). Si ingresás cc se convierte automáticamente."
         />
       </div>
       <div class="space-y-1.5 md:col-span-6">
