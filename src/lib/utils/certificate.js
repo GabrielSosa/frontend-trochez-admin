@@ -167,14 +167,39 @@ export async function printCertificate(avaluoId) {
       newWin.document.open();
       newWin.document.write(htmlText);
       newWin.document.close();
-      const wireUp = () => {
+
+      // Wait for every image (logo + watermark) to decode before triggering
+      // the print dialog. Without this, the first print would sometimes
+      // fire before the data-URL logos rendered and the printed/saved PDF
+      // came out without them.
+      const waitForImages = async () => {
+        const imgs = Array.from(newWin.document.images || []);
+        await Promise.all(
+          imgs.map((img) => {
+            if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+            if (typeof img.decode === 'function') {
+              return img.decode().catch(() => undefined);
+            }
+            return new Promise((resolve) => {
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true });
+            });
+          })
+        );
+        // Extra frame so the browser paints the freshly-decoded images.
+        await new Promise((r) => requestAnimationFrame(() => r()));
+      };
+
+      const wireUp = async () => {
         appendActionBar(newWin, avaluoId);
+        await waitForImages();
         try {
           newWin.print();
         } catch {
           /* ignore */
         }
       };
+
       if (newWin.document.readyState === 'complete') {
         wireUp();
       } else {
@@ -182,7 +207,7 @@ export async function printCertificate(avaluoId) {
         // Fallback in case `load` never fires (some browsers with about:blank).
         setTimeout(() => {
           if (!newWin.document.getElementById('__cert_actions')) wireUp();
-        }, 800);
+        }, 1200);
       }
     } else {
       const blob = new Blob([htmlText], { type: 'text/html; charset=utf-8' });
