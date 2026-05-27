@@ -44,35 +44,8 @@
       const httpResp = await apiFetch(ApiUrls.AVALUOS.getById(avaluoId));
       const data = await httpResp.json();
       
-      // Map API data to form data - This overwrites the defaults
-      formData = {
-        // Keep existing mapping logic which handles defaults/fallbacks correctly
-        appraisal_number: data.id || data.appraisal_number || avaluoId, 
-        appraisal_date: data.appraisal_date?.split('T')[0] || '', // Fallback to empty if not present
-        vehicle_description: data.vehicle_description || '',
-        brand: data.brand || '',
-        model_year: data.model_year || 0, // Fallback to 0
-        color: data.color || '',
-        mileage: data.mileage || 0,
-        fuel_type: data.fuel_type || 'GAS', // Fallback to GAS
-        engine_size: data.engine_size || 0,
-        plate_number: data.plate_number || '',
-        applicant: data.applicant || '',
-        owner: data.owner || '',
-        appraisal_value_usd: data.appraisal_value_usd || 0,
-        appraisal_value_trochez: data.appraisal_value_trochez || 0, 
-        apprasail_value_bank: data.apprasail_value_bank || 0, 
-        vin: data.vin || '',
-        vin_card: data.vin_card || '', 
-        engine_number: data.engine_number || '',
-        engine_number_card: data.engine_number_card || '', 
-        notes: data.notes || '',
-        extras: data.extras || '',
-        validity_days: data.validity_days || 30, 
-        validity_kms: data.validity_kms || 1000,
-        cert: data.cert || '',
-        deductions: data.deductions || [] 
-      };
+      // Map API data to form data using shared utility
+      formData = mapApiDataToFormData(data);
       
     } catch (error) {
       errorMessage = `Error al cargar el avalúo: ${error.message || 'Error desconocido'}`;
