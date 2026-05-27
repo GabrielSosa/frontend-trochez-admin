@@ -379,11 +379,8 @@ const httpResponse = await apiFetch(url);
         return;
       }
 
-      // Set generating flag
       generatingCertificate = true;
       generatingCertificateId = avaluoId;
-
-      // Start safety timeout
       resetStuckStates();
 
       const response = await fetch(ApiUrls.CERTIFICADOS.get(avaluoId), {
@@ -392,13 +389,15 @@ const httpResponse = await apiFetch(url);
       });
 
       if (!response.ok) {
-        throw new Error(`Error al obtener el certificado: ${response.status} ${response.statusText}`);
+        let errMsg = `Error ${response.status}`;
+        try { const j = await response.json(); errMsg = j.detail || j.message || errMsg; } catch(e) {}
+        throw new Error(errMsg);
       }
 
       const contentType = response.headers.get('content-type') ?? '';
 
       if (contentType.includes('application/pdf')) {
-        // Real PDF binary — open directly
+        // Real PDF binary
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const newWin = window.open(url, '_blank');
@@ -411,42 +410,39 @@ const httpResponse = await apiFetch(url);
           document.body.removeChild(link);
           showInfo('El certificado se está descargando. Revisa tu carpeta de descargas.');
         }
-      } else if (contentType.includes('text/html')) {
-        // HTML certificate — open in new window and trigger print dialog
+      } else {
+        // HTML certificate — render in new window regardless of Content-Type header
         const htmlText = await response.text();
+
+        // Surface JSON errors
+        if (htmlText.trimStart().startsWith('{')) {
+          try {
+            const j = JSON.parse(htmlText);
+            throw new Error(j.detail || j.message || 'Error al generar el certificado');
+          } catch(e) {
+            if (!(e instanceof SyntaxError)) throw e;
+          }
+        }
+
         const newWin = window.open('', '_blank');
         if (newWin) {
           newWin.document.open();
           newWin.document.write(htmlText);
           newWin.document.close();
-          // Give the browser a moment to render, then open print dialog
           newWin.onload = () => newWin.print();
-          // Fallback if onload already fired
-          setTimeout(() => {
-            try { newWin.print(); } catch(e) {}
-          }, 800);
+          setTimeout(() => { try { newWin.print(); } catch(e2) {} }, 800);
         } else {
-          // Popup blocked — fallback: create blob with proper MIME type
+          // Popup blocked fallback — download as HTML file
           const blob = new Blob([htmlText], { type: 'text/html; charset=utf-8' });
           const url = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.target = '_blank';
           link.download = `certificado_${avaluoId}.html`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          showInfo('El certificado se descargó como HTML. Ábrelo en el navegador y usa Imprimir → Guardar como PDF.');
+          showInfo('El certificado se descargó. Ábrelo en el navegador y usa Imprimir → Guardar como PDF.');
         }
-      } else if (contentType.includes('application/json')) {
-        const data = await response.json();
-        if (data.url) {
-          window.open(data.url, '_blank');
-        } else {
-          throw new Error(data.message || 'Error al generar el certificado');
-        }
-      } else {
-        throw new Error('Tipo de respuesta no soportado: ' + contentType);
       }
     } catch (error) {
       showError(`Error al obtener el certificado: ${error.message}`);
@@ -454,7 +450,8 @@ const httpResponse = await apiFetch(url);
       generatingCertificate = false;
       generatingCertificateId = null;
     }
-  }</script>
+  }
+</script>
 
 <div class="min-h-screen bg-gray-50">
   <Navbar {user} />
