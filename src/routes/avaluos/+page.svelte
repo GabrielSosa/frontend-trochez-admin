@@ -378,116 +378,83 @@ const httpResponse = await apiFetch(url);
         setTimeout(() => goto('/login'), 1000);
         return;
       }
-      
+
       // Set generating flag
       generatingCertificate = true;
       generatingCertificateId = avaluoId;
-      
+
       // Start safety timeout
       resetStuckStates();
-      
-      // Make a fetch request with the JWT token in the Authorization header
+
       const response = await fetch(ApiUrls.CERTIFICADOS.get(avaluoId), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
         throw new Error(`Error al obtener el certificado: ${response.status} ${response.statusText}`);
       }
-      
-      // Check content type to handle different response types
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/pdf')) {
-        // Handle PDF response
+
+      const contentType = response.headers.get('content-type') ?? '';
+
+      if (contentType.includes('application/pdf')) {
+        // Real PDF binary — open directly
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        
-        // Try multiple methods to open the PDF
-        try {
-          // Method 1: Try window.open first
-          const newWindow = window.open(url, '_blank');
-          
-          // Check if popup was blocked
-          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            // Method 2: Create a temporary link and click it
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.download = `certificado_${avaluoId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Show user message
-            setTimeout(() => {
-              showInfo('El certificado se está descargando. Si no se abrió automáticamente, revisa tu carpeta de descargas.');
-            }, 100);
-          }
-        } catch (popupError) {
-          // Method 3: Fallback to download
+        const newWin = window.open(url, '_blank');
+        if (!newWin) {
           const link = document.createElement('a');
           link.href = url;
           link.download = `certificado_${avaluoId}.pdf`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          
           showInfo('El certificado se está descargando. Revisa tu carpeta de descargas.');
         }
-      } else if (contentType && contentType.includes('application/json')) {
-        // Handle JSON response (might contain a URL or error)
+      } else if (contentType.includes('text/html')) {
+        // HTML certificate — open in new window and trigger print dialog
+        const htmlText = await response.text();
+        const newWin = window.open('', '_blank');
+        if (newWin) {
+          newWin.document.open();
+          newWin.document.write(htmlText);
+          newWin.document.close();
+          // Give the browser a moment to render, then open print dialog
+          newWin.onload = () => newWin.print();
+          // Fallback if onload already fired
+          setTimeout(() => {
+            try { newWin.print(); } catch(e) {}
+          }, 800);
+        } else {
+          // Popup blocked — fallback: create blob with proper MIME type
+          const blob = new Blob([htmlText], { type: 'text/html; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.target = '_blank';
+          link.download = `certificado_${avaluoId}.html`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          showInfo('El certificado se descargó como HTML. Ábrelo en el navegador y usa Imprimir → Guardar como PDF.');
+        }
+      } else if (contentType.includes('application/json')) {
         const data = await response.json();
         if (data.url) {
-          try {
-            const newWindow = window.open(data.url, '_blank');
-            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-              // Fallback: open in same window
-              window.location.href = data.url;
-            }
-          } catch (popupError) {
-            window.location.href = data.url;
-          }
+          window.open(data.url, '_blank');
         } else {
           throw new Error(data.message || 'Error al generar el certificado');
         }
       } else {
-        // Handle other response types
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        
-        try {
-          const newWindow = window.open(url, '_blank');
-          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.download = `certificado_${avaluoId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        } catch (popupError) {
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `certificado_${avaluoId}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
+        throw new Error('Tipo de respuesta no soportado: ' + contentType);
       }
     } catch (error) {
       showError(`Error al obtener el certificado: ${error.message}`);
     } finally {
-      // Ensure generating flag is reset
       generatingCertificate = false;
       generatingCertificateId = null;
     }
-  }
-</script>
+  }</script>
 
 <div class="min-h-screen bg-gray-50">
   <Navbar {user} />
