@@ -45,12 +45,14 @@
   let selected = $state(new Set());
   let showFilters = $state(false);
   let busyAction = $state(null); // {type:'cert'|'duplicate'|'delete', id}
+  let dense = $state(true);
 
   let filterBrand = $state('');
   let filterColor = $state('');
   let filterFrom = $state('');
   let filterTo = $state('');
   let searchInput = $state('');
+  let searchEl;
 
   // Sync local filter inputs with the store (one-way: store -> inputs on initial load).
   let syncedOnce = false;
@@ -70,8 +72,65 @@
       goto('/login');
       return;
     }
+    // Restore density preference.
+    const saved = localStorage.getItem('avaluosDense');
+    if (saved === '0') dense = false;
     // Always (re)load on mount — using the cached state for the first paint avoids flicker.
     store.load();
+
+    function onKey(e) {
+      // Ignore if user is typing in a field (except for some global keys).
+      const tag = (e.target?.tagName ?? '').toLowerCase();
+      const editing = ['input', 'textarea', 'select'].includes(tag) || e.target?.isContentEditable;
+      if (e.key === '/' && !editing) {
+        e.preventDefault();
+        searchEl?.focus();
+        searchEl?.select?.();
+        return;
+      }
+      if (e.key === 'Escape' && document.activeElement === searchEl) {
+        searchInput = '';
+        store.setSearch('');
+        searchEl?.blur();
+        return;
+      }
+      if (editing) return;
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        goto('/avaluos/nuevo');
+        return;
+      }
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        refreshAll();
+        return;
+      }
+      // Per-row shortcuts when exactly one item is selected via checkbox.
+      if (selected.size === 1) {
+        const onlyId = Array.from(selected)[0];
+        if (e.key === 'e' || e.key === 'E') {
+          e.preventDefault();
+          goto(`/avaluos/${onlyId}/editar`);
+        } else if (e.key === 'd' || e.key === 'D') {
+          e.preventDefault();
+          duplicateOne(onlyId);
+        } else if (e.key === 'p' || e.key === 'P') {
+          e.preventDefault();
+          handlePrint(onlyId);
+        } else if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          deleteOne(onlyId);
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  });
+
+  $effect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('avaluosDense', dense ? '1' : '0');
+    }
   });
 
   const debouncedSearch = debounce((value) => {
@@ -178,8 +237,14 @@
     if (!ok) return;
     try {
       busyAction = { type: 'duplicate', id };
-      await apiJson(ApiUrls.AVALUOS.duplicate(id), { method: 'POST' });
+      const created = await apiJson(ApiUrls.AVALUOS.duplicate(id), { method: 'POST' });
+      const newId = created?.vehicle_appraisal_id ?? created?.id;
       showSuccess('Avalúo duplicado');
+      if (newId) {
+        // Lotus-style flow: jump straight to the editor of the new copy.
+        goto(`/avaluos/${newId}/editar`);
+        return;
+      }
       await store.load();
     } catch (e) {
       showError(e.message ?? 'No se pudo duplicar');
@@ -246,9 +311,18 @@
     { key: 'appraisal_date', label: 'Fecha', sortable: true, align: 'left' },
     { key: 'applicant', label: 'Cliente', sortable: true, align: 'left' },
     { key: 'brand', label: 'Vehículo', sortable: true, align: 'left' },
+    { key: 'model_year', label: 'Año', sortable: true, align: 'left' },
+    { key: 'color', label: 'Color', sortable: false, align: 'left' },
     { key: 'plate_number', label: 'Placa', sortable: true, align: 'left' },
-    { key: 'appraisal_value_trochez', label: 'Valor', sortable: true, align: 'right' }
+    { key: 'mileage', label: 'KM', sortable: false, align: 'right' },
+    { key: 'appraisal_value_trochez', label: 'Valor ₡', sortable: true, align: 'right' },
+    { key: 'appraisal_value_usd', label: 'Valor $', sortable: true, align: 'right' }
   ];
+
+  // Density-driven cell paddings.
+  let cellPadX = $derived(dense ? 'px-2.5' : 'px-3');
+  let cellPadY = $derived(dense ? 'py-1.5' : 'py-3');
+  let textSize = $derived(dense ? 'text-xs' : 'text-sm');
 </script>
 
 <div class="space-y-6">
@@ -287,11 +361,14 @@
     <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div class="relative w-full md:max-w-sm">
         <Search size={16} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <Input
+        <input
+          bind:this={searchEl}
           bind:value={searchInput}
           oninput={onSearchInput}
-          placeholder="Buscar por placa, propietario, VIN, marca…"
-          class="pl-9 pr-9"
+          placeholder="Buscar… (presioná / para enfocar)"
+          spellcheck="false"
+          autocomplete="off"
+          class="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
         />
         {#if searchInput}
           <button
@@ -308,6 +385,14 @@
         {/if}
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onclick={() => (dense = !dense)}
+          title={dense ? 'Cambiar a vista cómoda' : 'Cambiar a vista compacta'}
+        >
+          {dense ? 'Cómodo' : 'Compacto'}
+        </Button>
         <Button variant="outline" size="sm" onclick={() => (showFilters = !showFilters)}>
           <Filter size={14} />
           Filtros
@@ -367,10 +452,10 @@
   <!-- Table -->
   <Card class="overflow-hidden">
     <div class="relative w-full overflow-x-auto">
-      <table class="w-full caption-bottom text-sm">
+      <table class={cn('w-full caption-bottom', textSize)}>
         <thead class="bg-muted/40">
           <tr class="border-b">
-            <th class="w-10 px-3 py-2.5">
+            <th class={cn('w-9', cellPadX, cellPadY)}>
               <Checkbox
                 checked={allSelected}
                 indeterminate={someSelected}
@@ -380,7 +465,9 @@
             {#each columns as col}
               <th
                 class={cn(
-                  'px-3 py-2.5 font-medium text-muted-foreground',
+                  'font-medium text-muted-foreground whitespace-nowrap',
+                  cellPadX,
+                  cellPadY,
                   col.align === 'right' && 'text-right'
                 )}
               >
@@ -406,16 +493,18 @@
                 {/if}
               </th>
             {/each}
-            <th class="w-10 px-3 py-2.5"></th>
+            <th class={cn('sticky right-0 z-10 w-12 text-right bg-muted/40', cellPadX, cellPadY, 'shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.08)]')}>
+              <span class="sr-only">Acciones</span>
+            </th>
           </tr>
         </thead>
         <tbody>
           {#if s.loading && s.items.length === 0}
-            {#each Array(6) as _, i}
+            {#each Array(8) as _, i}
               <tr class="border-b">
-                <td class="px-3 py-3"><div class="h-4 w-4 rounded bg-muted animate-pulse"></div></td>
+                <td class={cn(cellPadX, cellPadY)}><div class="h-4 w-4 rounded bg-muted animate-pulse"></div></td>
                 {#each columns as _c}
-                  <td class="px-3 py-3">
+                  <td class={cn(cellPadX, cellPadY)}>
                     <div class="h-3 w-3/4 rounded bg-muted animate-pulse"></div>
                   </td>
                 {/each}
@@ -445,62 +534,95 @@
             {#each s.items as item (item.vehicle_appraisal_id)}
               {@const id = item.vehicle_appraisal_id}
               {@const isSelected = selected.has(id)}
-              <tr class={cn('border-b transition-colors hover:bg-muted/30', isSelected && 'bg-accent/30')}>
-                <td class="px-3 py-3">
+              <tr
+                class={cn('group border-b transition-colors hover:bg-muted/40 cursor-default', isSelected && 'bg-accent/30')}
+                ondblclick={(e) => {
+                  // Ignore double-click on interactive cells (checkbox, action menu).
+                  if (e.target?.closest('button, a, [role="checkbox"], input')) return;
+                  goto(`/avaluos/${id}/editar`);
+                }}
+                title="Doble-click para editar"
+              >
+                <td class={cn(cellPadX, cellPadY)}>
                   <Checkbox checked={isSelected} onclick={() => toggleOne(id)} />
                 </td>
-                <td class="px-3 py-3 font-medium tabular-nums">{id}</td>
-                <td class="px-3 py-3 text-muted-foreground tabular-nums">{item.cert ?? '—'}</td>
-                <td class="px-3 py-3 text-muted-foreground">{formatDate(item.appraisal_date)}</td>
-                <td class="px-3 py-3">
-                  <div class="font-medium">{item.applicant ?? '—'}</div>
+                <td class={cn('font-medium tabular-nums', cellPadX, cellPadY)}>{id}</td>
+                <td class={cn('text-muted-foreground tabular-nums', cellPadX, cellPadY)}>{item.cert ?? '—'}</td>
+                <td class={cn('text-muted-foreground whitespace-nowrap', cellPadX, cellPadY)}>{formatDate(item.appraisal_date)}</td>
+                <td class={cn(cellPadX, cellPadY)}>
+                  <div class="font-medium truncate max-w-[180px]" title={item.applicant ?? ''}>{item.applicant ?? '—'}</div>
                   {#if item.owner && item.owner !== item.applicant}
-                    <div class="text-xs text-muted-foreground">{item.owner}</div>
+                    <div class="text-[11px] text-muted-foreground truncate max-w-[180px]" title={item.owner}>{item.owner}</div>
                   {/if}
                 </td>
-                <td class="px-3 py-3">
-                  <div class="font-medium">{item.brand ?? '—'}</div>
+                <td class={cn(cellPadX, cellPadY)}>
+                  <div class="font-medium truncate max-w-[200px]" title={`${item.brand ?? ''} ${item.vehicle_description ?? ''}`}>{item.brand ?? '—'}</div>
                   {#if item.vehicle_description}
-                    <div class="text-xs text-muted-foreground">{item.vehicle_description} {item.model_year ?? ''}</div>
+                    <div class="text-[11px] text-muted-foreground truncate max-w-[200px]">{item.vehicle_description}</div>
                   {/if}
                 </td>
-                <td class="px-3 py-3">
+                <td class={cn('tabular-nums text-muted-foreground', cellPadX, cellPadY)}>{item.model_year ?? '—'}</td>
+                <td class={cn('text-muted-foreground whitespace-nowrap', cellPadX, cellPadY)}>{item.color ?? '—'}</td>
+                <td class={cn(cellPadX, cellPadY)}>
                   {#if item.plate_number}
                     <Badge variant="outline">{item.plate_number}</Badge>
                   {:else}
                     —
                   {/if}
                 </td>
-                <td class="px-3 py-3 text-right tabular-nums font-medium">
+                <td class={cn('text-right tabular-nums text-muted-foreground', cellPadX, cellPadY)}>
+                  {item.mileage ? Number(item.mileage).toLocaleString('es-CR') : '—'}
+                </td>
+                <td class={cn('text-right tabular-nums font-medium whitespace-nowrap', cellPadX, cellPadY)}>
                   {item.appraisal_value_trochez ? formatCRC(item.appraisal_value_trochez) : '—'}
                 </td>
-                <td class="px-3 py-3 text-right">
+                <td class={cn('text-right tabular-nums text-muted-foreground whitespace-nowrap', cellPadX, cellPadY)}>
+                  {item.appraisal_value_usd ? `$${Number(item.appraisal_value_usd).toLocaleString('en-US')}` : '—'}
+                </td>
+                <td
+                  class={cn(
+                    'sticky right-0 text-right bg-background group-hover:bg-muted/40 transition-colors',
+                    isSelected && 'bg-accent/30 group-hover:bg-accent/40',
+                    cellPadX,
+                    cellPadY,
+                    'shadow-[-6px_0_8px_-6px_rgba(0,0,0,0.08)]'
+                  )}
+                >
                   <DropdownMenu>
                     {#snippet trigger()}
                       <button
                         type="button"
-                        class="rounded-md p-1.5 hover:bg-accent"
-                        aria-label="Acciones"
+                        class="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                        aria-label="Acciones del avalúo"
+                        title="Acciones"
                       >
-                        <MoreHorizontal size={16} />
+                        {#if busyAction?.id === id}
+                          <Spinner size={14} />
+                        {:else}
+                          <MoreHorizontal size={16} />
+                        {/if}
                       </button>
                     {/snippet}
                     <DropdownItem href={`/avaluos/${id}/editar`}>
-                      <Pencil size={14} /> Editar
-                    </DropdownItem>
-                    <DropdownItem onclick={() => handlePrint(id)}>
-                      {#if busyAction?.type === 'cert' && busyAction.id === id}
-                        <Spinner size={14} />
-                      {:else}
-                        <Printer size={14} />
-                      {/if}
-                      Certificado
+                      <Pencil size={14} />
+                      <span class="flex-1 text-left">Editar</span>
+                      <kbd class="text-[10px] text-muted-foreground/70">E</kbd>
                     </DropdownItem>
                     <DropdownItem onclick={() => duplicateOne(id)}>
-                      <Copy size={14} /> Duplicar
+                      <Copy size={14} />
+                      <span class="flex-1 text-left">Duplicar y editar</span>
+                      <kbd class="text-[10px] text-muted-foreground/70">D</kbd>
                     </DropdownItem>
+                    <DropdownItem onclick={() => handlePrint(id)}>
+                      <Printer size={14} />
+                      <span class="flex-1 text-left">Imprimir certificado</span>
+                      <kbd class="text-[10px] text-muted-foreground/70">P</kbd>
+                    </DropdownItem>
+                    <div class="my-1 h-px bg-border"></div>
                     <DropdownItem destructive onclick={() => deleteOne(id)}>
-                      <Trash2 size={14} /> Eliminar
+                      <Trash2 size={14} />
+                      <span class="flex-1 text-left">Eliminar</span>
+                      <kbd class="text-[10px] text-destructive/60">Del</kbd>
                     </DropdownItem>
                   </DropdownMenu>
                 </td>
@@ -570,4 +692,18 @@
       </Button>
     </div>
   </div>
+
+  <!-- Subtle keyboard hints (estilo Lotus power-user) -->
+  <p class="hidden md:flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
+    <span class="inline-flex items-center gap-1"><kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">/</kbd> buscar</span>
+    <span class="inline-flex items-center gap-1"><kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">N</kbd> nuevo</span>
+    <span class="inline-flex items-center gap-1"><kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">R</kbd> actualizar</span>
+    <span class="inline-flex items-center gap-1">
+      <kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">E</kbd>
+      <kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">D</kbd>
+      <kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">P</kbd>
+      con 1 fila seleccionada
+    </span>
+    <span class="inline-flex items-center gap-1">Doble-click en fila → editar</span>
+  </p>
 </div>

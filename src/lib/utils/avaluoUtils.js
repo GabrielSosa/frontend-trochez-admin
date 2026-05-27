@@ -70,12 +70,35 @@ export function cleanAvaluoFormData(formData) {
   if (cleanedData.deductions && Array.isArray(cleanedData.deductions)) {
     cleanedData.deductions = cleanedData.deductions
       .map(d => ({
-        description: d.description || '',
+        description: (d.description || '').toUpperCase(),
         amount: Number(d.amount) || 0,
       }))
       .filter(d => d.description || d.amount > 0);
   } else {
     cleanedData.deductions = [];
+  }
+
+  // Uppercase the free-text fields so what gets saved matches what the form
+  // displays (every input has `class="uppercase"` applied visually). Codes
+  // already come in uppercase from their own inputs.
+  const upperFields = [
+    'brand',
+    'vehicle_description',
+    'color',
+    'fuel_type',
+    'plate_number',
+    'applicant',
+    'owner',
+    'extras',
+    'notes',
+    'vin',
+    'vin_card',
+    'engine_number',
+    'engine_number_card'
+  ];
+  for (const f of upperFields) {
+    const v = cleanedData[f];
+    if (typeof v === 'string' && v) cleanedData[f] = v.toUpperCase();
   }
 
   return cleanedData;

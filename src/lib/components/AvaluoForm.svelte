@@ -12,6 +12,10 @@
   import Dialog from '$lib/components/ui/Dialog.svelte';
   import Spinner from '$lib/components/ui/Spinner.svelte';
   import { spell } from '$lib/stores/spell.svelte.js';
+  import { suggestions } from '$lib/stores/suggestions.svelte.js';
+  import { vehicleCatalog } from '$lib/stores/vehicleCatalog.svelte.js';
+  import { avaluosStore } from '$lib/stores/avaluos.svelte.js';
+  import { ApiUrls, apiFetch } from '$lib/api.js';
   import { onMount } from 'svelte';
   import { Trash2, Plus, Pencil, Save, X, Calculator } from 'lucide-svelte';
   import { formatCRC } from '$lib/utils.js';
@@ -81,8 +85,66 @@
   // so suggestions are ready by the time the user starts typing.
   onMount(() => {
     spell.init();
+    suggestions.hydrate();
+    vehicleCatalog.ensureLoaded();
+    // Bootstrap the user-history bank for both /nuevo and /editar — first from
+    // anything already in memory, then from a single backend fetch if needed.
+    if (avaluosStore.items?.length) suggestions.ingestItems(avaluosStore.items);
+    (async () => {
+      if (avaluosStore.items?.length >= 50) return;
+      try {
+        const res = await apiFetch(`${ApiUrls.AVALUOS.getAll}?limit=200&page=1`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const items = Array.isArray(json?.items) ? json.items : [];
+        if (items.length) suggestions.ingestItems(items);
+      } catch {
+        /* non-blocking */
+      }
+    })();
   });
+
+  function dedupeMerge(...lists) {
+    const seen = new Set();
+    const out = [];
+    for (const list of lists) {
+      for (const item of list ?? []) {
+        const key = String(item).trim().toUpperCase();
+        if (!key || seen.has(key)) continue;
+        seen.add(key);
+        out.push(key);
+      }
+    }
+    return out;
+  }
+
+  // User history first (most relevant), then the public catalog as a long
+  // tail. The datalist is built lazily so changes propagate when either
+  // source updates.
+  let brandSugg = $derived(dedupeMerge(suggestions.get('brand'), vehicleCatalog.makes));
+  let descSugg = $derived(
+    dedupeMerge(
+      suggestions.get('vehicle_description'),
+      vehicleCatalog.modelsFor(formData.brand)
+    )
+  );
+  let colorSugg = $derived(suggestions.get('color'));
+  let fuelSugg = $derived(suggestions.get('fuel_type'));
+  let applicantSugg = $derived(suggestions.get('applicant'));
+  let ownerSugg = $derived(suggestions.get('owner'));
+  let extrasSugg = $derived(suggestions.get('extras'));
 </script>
+
+<!-- Native HTML5 suggestion lists fed by previous appraisals (stored in
+     localStorage by suggestions.svelte.js). The browser shows them as a
+     dropdown beneath the input as soon as the user focuses or types. -->
+<datalist id="sugg-brand">{#each brandSugg as v}<option value={v}></option>{/each}</datalist>
+<datalist id="sugg-desc">{#each descSugg as v}<option value={v}></option>{/each}</datalist>
+<datalist id="sugg-color">{#each colorSugg as v}<option value={v}></option>{/each}</datalist>
+<datalist id="sugg-fuel">{#each fuelSugg as v}<option value={v}></option>{/each}<option value="GAS"></option><option value="DIESEL"></option><option value="HIBRIDO"></option><option value="ELECTRICO"></option></datalist>
+<datalist id="sugg-applicant">{#each applicantSugg as v}<option value={v}></option>{/each}</datalist>
+<datalist id="sugg-owner">{#each ownerSugg as v}<option value={v}></option>{/each}</datalist>
+<datalist id="sugg-extras">{#each extrasSugg as v}<option value={v}></option>{/each}</datalist>
 
 <form onsubmit={handleSubmit} class="space-y-6">
   <!-- Encabezado / metadatos -->
@@ -133,10 +195,12 @@
         <Label for="applicant">Solicitante <span class="text-destructive">*</span></Label>
         <SpellInput
           id="applicant"
+          list="sugg-applicant"
           bind:value={formData.applicant}
           error={!!validationErrors?.applicant}
           placeholder="Nombre del solicitante"
           required
+          class="uppercase"
         />
         {#if validationErrors?.applicant}
           <p class="text-xs text-destructive">{validationErrors.applicant}</p>
@@ -144,7 +208,7 @@
       </div>
       <div class="space-y-1.5">
         <Label for="owner">Propietario</Label>
-        <SpellInput id="owner" bind:value={formData.owner} placeholder="Propietario" />
+        <SpellInput id="owner" list="sugg-owner" bind:value={formData.owner} placeholder="Propietario" class="uppercase" />
       </div>
     </CardContent>
   </Card>
@@ -159,10 +223,12 @@
         <Label for="brand">Marca <span class="text-destructive">*</span></Label>
         <SpellInput
           id="brand"
+          list="sugg-brand"
           bind:value={formData.brand}
           error={!!validationErrors?.brand}
           placeholder="Toyota"
           required
+          class="uppercase"
         />
         {#if validationErrors?.brand}
           <p class="text-xs text-destructive">{validationErrors.brand}</p>
@@ -174,10 +240,12 @@
         </Label>
         <SpellInput
           id="vehicle_description"
+          list="sugg-desc"
           bind:value={formData.vehicle_description}
           error={!!validationErrors?.vehicle_description}
           placeholder="Hilux 4x4 Cabina Doble"
           required={requiredVehicleDescription}
+          class="uppercase"
         />
         {#if validationErrors?.vehicle_description}
           <p class="text-xs text-destructive">{validationErrors.vehicle_description}</p>
@@ -195,7 +263,7 @@
       </div>
       <div class="space-y-1.5">
         <Label for="color">Color</Label>
-        <SpellInput id="color" bind:value={formData.color} placeholder="Negro" />
+        <SpellInput id="color" list="sugg-color" bind:value={formData.color} placeholder="Negro" class="uppercase" />
       </div>
       <div class="space-y-1.5">
         <Label for="plate_number">Placa</Label>
@@ -215,7 +283,7 @@
       </div>
       <div class="space-y-1.5">
         <Label for="fuel_type">Combustible</Label>
-        <SpellInput id="fuel_type" bind:value={formData.fuel_type} placeholder="Diesel" />
+        <SpellInput id="fuel_type" list="sugg-fuel" bind:value={formData.fuel_type} placeholder="Diesel" class="uppercase" />
       </div>
       <div class="space-y-1.5">
         <Label for="engine_size">Cilindraje <span class="text-muted-foreground font-normal">(litros)</span></Label>
@@ -232,11 +300,11 @@
       </div>
       <div class="space-y-1.5 md:col-span-6">
         <Label for="extras">Extras</Label>
-        <SpellInput id="extras" bind:value={formData.extras} placeholder="Equipamiento adicional" />
+        <SpellInput id="extras" list="sugg-extras" bind:value={formData.extras} placeholder="Equipamiento adicional" class="uppercase" />
       </div>
       <div class="space-y-1.5 md:col-span-6">
         <Label for="notes">Observaciones</Label>
-        <SpellTextarea id="notes" bind:value={formData.notes} placeholder="Notas sobre el vehículo…" rows="3" />
+        <SpellTextarea id="notes" bind:value={formData.notes} placeholder="Notas sobre el vehículo…" rows="3" class="uppercase" />
       </div>
     </CardContent>
   </Card>
@@ -344,6 +412,7 @@
                 <SpellInput
                   bind:value={deduction.description}
                   placeholder="Descripción de la deducción #{index + 1}"
+                  class="uppercase"
                 />
                 <Input
                   type="number"

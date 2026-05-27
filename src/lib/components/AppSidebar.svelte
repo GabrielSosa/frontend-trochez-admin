@@ -45,11 +45,35 @@
     mobileOpen ? 'w-60 translate-x-0' : '-translate-x-full md:translate-x-0'
   )}
 >
-  <div class="flex h-14 items-center justify-between gap-2 border-b border-sidebar-border px-3">
-    <a href="/" class="flex items-center gap-2 overflow-hidden">
-      <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold">T</div>
+  <!-- Floating collapse toggle (desktop only). Sits half-out of the sidebar
+       border so it's always visible and never overlaps the header content. -->
+  <button
+    type="button"
+    onclick={() => (collapsed = !collapsed)}
+    class={cn(
+      'hidden md:flex absolute top-6 -right-3 z-50 h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-sm hover:bg-sidebar-accent transition-transform',
+      collapsed && 'rotate-180'
+    )}
+    aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+    title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+  >
+    <ChevronLeft size={14} />
+  </button>
+
+  <div class={cn('flex h-14 items-center gap-2 border-b border-sidebar-border', collapsed ? 'px-2 justify-center' : 'px-3 justify-between')}>
+    <a
+      href="/"
+      class="flex items-center gap-2 overflow-hidden"
+      aria-label="Avalúos Trochez"
+      title="Avalúos Trochez"
+    >
+      <img
+        src="/logo.png"
+        alt="Avalúos Trochez"
+        class={cn('shrink-0 object-contain transition-all', collapsed ? 'h-9 w-9' : 'h-10 w-10')}
+      />
       {#if !collapsed}
-        <span class="truncate font-semibold tracking-tight">Trochez</span>
+        <span class="truncate text-base font-semibold tracking-tight">Trochez</span>
       {/if}
     </a>
     <button
@@ -59,14 +83,6 @@
       aria-label="Cerrar"
     >
       <X size={18} />
-    </button>
-    <button
-      type="button"
-      onclick={() => (collapsed = !collapsed)}
-      class={cn('hidden md:inline-flex rounded p-1 hover:bg-sidebar-accent', collapsed && 'rotate-180')}
-      aria-label="Colapsar"
-    >
-      <ChevronLeft size={18} />
     </button>
   </div>
 

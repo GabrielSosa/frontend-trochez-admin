@@ -1,4 +1,5 @@
 import { ApiUrls, apiJson } from '$lib/api.js';
+import { suggestions } from './suggestions.svelte.js';
 
 const initialState = () => ({
   items: [],
@@ -39,6 +40,9 @@ async function load() {
     state.items = Array.isArray(data.items) ? data.items : data ?? [];
     state.total = data.total ?? state.items.length;
     state.lastFetched = Date.now();
+    // Feed the autocomplete bank with whatever values came back so the
+    // /nuevo form has fresh suggestions even on the first visit.
+    suggestions.ingestItems(state.items);
   } catch (e) {
     state.error = e.message ?? 'Error al cargar avalúos';
   } finally {

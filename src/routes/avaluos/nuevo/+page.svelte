@@ -4,9 +4,11 @@
   import AvaluoForm from '$lib/components/AvaluoForm.svelte';
   import { ApiUrls, apiJson } from '$lib/api.js';
   import { auth } from '$lib/stores/auth.svelte.js';
-  import { showError, showSuccess } from '$lib/utils/toast.js';
+  import { showError, showSuccess, showInfo } from '$lib/utils/toast.js';
   import { confirmCancel } from '$lib/utils/confirm.js';
   import { printCertificate } from '$lib/utils/certificate.js';
+  import { draft } from '$lib/stores/draft.svelte.js';
+  import { suggestions } from '$lib/stores/suggestions.svelte.js';
   import {
     validateAvaluoFormData,
     cleanAvaluoFormData,
@@ -14,7 +16,7 @@
   } from '$lib/utils/avaluoUtils.js';
   import Button from '$lib/components/ui/Button.svelte';
   import Card from '$lib/components/ui/Card.svelte';
-  import { Printer, ArrowLeft, ChevronLeft } from 'lucide-svelte';
+  import { Printer, ArrowLeft, ChevronLeft, Save, Trash2, RotateCcw } from 'lucide-svelte';
 
   let isSubmitting = $state(false);
   let validationErrors = $state({});
@@ -25,11 +27,60 @@
     appraisal_date: new Date().toISOString().split('T')[0]
   });
 
+  let draftRestored = $state(false);
+  let lastSavedLabel = $state('');
+
+  function formatSavedAt(iso) {
+    if (!iso) return '';
+    const then = new Date(iso);
+    const diff = (Date.now() - then.getTime()) / 1000;
+    if (diff < 60) return 'hace unos segundos';
+    if (diff < 3600) return `hace ${Math.floor(diff / 60)} min`;
+    return then.toLocaleString('es-CR');
+  }
+
   onMount(() => {
     auth.hydrate();
     if (!auth.isAuthenticated) {
       goto('/login');
+      return;
     }
+    // AvaluoForm hydrates suggestions and bootstraps from the backend; just load the draft.
+    draft.hydrate();
+    if (draft.hasContent) {
+      // Auto-restore the draft and let the user know. If they want a clean
+      // form, the "Descartar borrador" button wipes it.
+      formData = { ...formData, ...draft.data };
+      draftRestored = true;
+      lastSavedLabel = formatSavedAt(draft.savedAt);
+      showInfo('Borrador restaurado');
+    }
+
+    const tick = setInterval(() => {
+      if (draft.savedAt) lastSavedLabel = formatSavedAt(draft.savedAt);
+    }, 30_000);
+
+    // Flush the draft synchronously on reload/close so an early F5 doesn't
+    // lose data still sitting in the debounce timer.
+    const flushOnUnload = () => {
+      if (!savedAvaluoId) draft.flush(formData);
+    };
+    window.addEventListener('beforeunload', flushOnUnload);
+    window.addEventListener('pagehide', flushOnUnload);
+
+    return () => {
+      clearInterval(tick);
+      window.removeEventListener('beforeunload', flushOnUnload);
+      window.removeEventListener('pagehide', flushOnUnload);
+    };
+  });
+
+  // Persist draft whenever the form changes (debounced inside the store).
+  // We snapshot the proxy so the timer callback captures plain data, not
+  // the live state object.
+  $effect(() => {
+    if (savedAvaluoId) return; // already committed → nothing to save
+    draft.saveDebounced(formData);
   });
 
   async function handleSubmit() {
@@ -48,6 +99,11 @@
         body: JSON.stringify(body)
       });
       savedAvaluoId = result.vehicle_appraisal_id ?? result.id;
+      // Remember the typed values for future autocomplete, then drop the draft.
+      suggestions.remember(formData);
+      draft.clear();
+      lastSavedLabel = '';
+      draftRestored = false;
       showSuccess('Avalúo guardado correctamente');
     } catch (err) {
       if (err?.data?.detail && Array.isArray(err.data.detail)) {
@@ -66,7 +122,21 @@
 
   async function handleCancel() {
     const ok = await confirmCancel();
-    if (ok) goto('/avaluos');
+    if (ok) {
+      draft.clear();
+      goto('/avaluos');
+    }
+  }
+
+  function discardDraft() {
+    draft.clear();
+    formData = {
+      ...getDefaultAvaluoFormData(),
+      appraisal_date: new Date().toISOString().split('T')[0]
+    };
+    draftRestored = false;
+    lastSavedLabel = '';
+    showInfo('Borrador descartado');
   }
 </script>
 
@@ -81,7 +151,36 @@
         <p class="text-sm text-muted-foreground">Registrá un nuevo avalúo vehicular</p>
       </div>
     </div>
+    {#if !savedAvaluoId && lastSavedLabel}
+      <div class="flex items-center gap-2 text-xs text-muted-foreground">
+        <Save size={12} />
+        <span>Borrador guardado {lastSavedLabel}</span>
+        <button
+          type="button"
+          onclick={discardDraft}
+          class="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] hover:bg-accent"
+          title="Descartar borrador y empezar de cero"
+        >
+          <Trash2 size={11} /> Descartar
+        </button>
+      </div>
+    {/if}
   </div>
+
+  {#if draftRestored && !savedAvaluoId}
+    <Card class="border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+      <div class="flex items-center justify-between gap-2">
+        <span class="inline-flex items-center gap-2">
+          <RotateCcw size={14} /> Se restauró un borrador que tenías sin guardar.
+        </span>
+        <button
+          type="button"
+          onclick={discardDraft}
+          class="text-xs underline hover:no-underline"
+        >Descartar y empezar de cero</button>
+      </div>
+    </Card>
+  {/if}
 
   {#if savedAvaluoId}
     <Card class="border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
