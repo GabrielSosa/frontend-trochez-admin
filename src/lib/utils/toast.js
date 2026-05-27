@@ -1,81 +1,21 @@
-import Toastify from 'toastify-js';
-import 'toastify-js/src/toastify.css';
+import { toast } from 'svelte-sonner';
 
-// Configuración por defecto para las notificaciones
-const defaultConfig = {
-  duration: 4000,
-  gravity: 'top',
-  position: 'right',
-  stopOnFocus: true,
-  close: true,
-  style: {
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-  }
-};
-
-// Función para mostrar notificación de éxito
-export function showSuccess(message, duration = 4000) {
-  Toastify({
-    ...defaultConfig,
-    text: message,
-    duration: duration,
-    style: {
-      ...defaultConfig.style,
-      background: '#10b981', // Verde
-      color: '#ffffff',
-    }
-  }).showToast();
+export function showSuccess(message, opts = {}) {
+  return toast.success(message, { duration: 3500, ...opts });
 }
 
-// Función para mostrar notificación de error
-export function showError(message, duration = 6000) {
-  Toastify({
-    ...defaultConfig,
-    text: message,
-    duration: duration,
-    style: {
-      ...defaultConfig.style,
-      background: '#ef4444', // Rojo
-      color: '#ffffff',
-    }
-  }).showToast();
+export function showError(message, opts = {}) {
+  return toast.error(message, { duration: 5000, ...opts });
 }
 
-// Función para mostrar notificación de advertencia
-export function showWarning(message, duration = 5000) {
-  Toastify({
-    ...defaultConfig,
-    text: message,
-    duration: duration,
-    style: {
-      ...defaultConfig.style,
-      background: '#f59e0b', // Amarillo
-      color: '#ffffff',
-    }
-  }).showToast();
+export function showWarning(message, opts = {}) {
+  return toast.warning(message, { duration: 4500, ...opts });
 }
 
-// Función para mostrar notificación de información
-export function showInfo(message, duration = 4000) {
-  Toastify({
-    ...defaultConfig,
-    text: message,
-    duration: duration,
-    style: {
-      ...defaultConfig.style,
-      background: '#3b82f6', // Azul
-      color: '#ffffff',
-    }
-  }).showToast();
+export function showInfo(message, opts = {}) {
+  return toast.info(message, { duration: 3500, ...opts });
 }
 
-// Función para mostrar notificación personalizada
-export function showToast(message, options = {}) {
-  Toastify({
-    ...defaultConfig,
-    ...options,
-    text: message,
-  }).showToast();
-} 
+export function showToast(message, opts = {}) {
+  return toast(message, { duration: 4000, ...opts });
+}

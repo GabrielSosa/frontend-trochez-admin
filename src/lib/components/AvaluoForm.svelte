@@ -1,596 +1,453 @@
 <script>
-  // Props received from parent
-  export let formData;
-  export let validationErrors = {};
-  export let isSubmitting = false;
-  export let isEdit = false;
+  import Card from '$lib/components/ui/Card.svelte';
+  import CardHeader from '$lib/components/ui/CardHeader.svelte';
+  import CardTitle from '$lib/components/ui/CardTitle.svelte';
+  import CardContent from '$lib/components/ui/CardContent.svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
+  import Label from '$lib/components/ui/Label.svelte';
+  import Textarea from '$lib/components/ui/Textarea.svelte';
+  import Dialog from '$lib/components/ui/Dialog.svelte';
+  import Spinner from '$lib/components/ui/Spinner.svelte';
+  import { Trash2, Plus, Pencil, Save, X, Calculator } from 'lucide-svelte';
+  import { formatCRC } from '$lib/utils.js';
 
-  // Dispatchers for events
-  import { createEventDispatcher } from 'svelte';
-  const dispatch = createEventDispatcher();
+  let {
+    formData = $bindable(),
+    validationErrors = {},
+    isSubmitting = false,
+    isEdit = false,
+    onsubmit,
+    oncancel
+  } = $props();
 
-  // Initialize deductions if not present
-  if (!formData.deductions) {
-    formData.deductions = [];
-  }
-  // Ensure apprasail_value_bank exists, initialize if not (though ideally done in parent)
-  if (formData.apprasail_value_bank === undefined) {
-      formData.apprasail_value_bank = 0; 
-  }
-  // Ensure extras exists, initialize if not
-  if (formData.extras === undefined) {
-      formData.extras = ''; 
-  }
-  // Ensure cert exists, initialize if not
-  if (formData.cert === undefined) {
-      formData.cert = ''; 
-  }
-  // Ensure bank_value_in_dollars exists, initialize if not
-  if (formData.bank_value_in_dollars === undefined) {
-      formData.bank_value_in_dollars = 0; 
-  }
-  // Ensure discounts exists, initialize if not
-  if (formData.discounts === undefined) {
-      formData.discounts = 0; 
-  }
+  // Make sure required nested defaults exist.
+  $effect(() => {
+    if (!Array.isArray(formData.deductions)) formData.deductions = [];
+    if (formData.apprasail_value_bank === undefined) formData.apprasail_value_bank = 0;
+    if (formData.bank_value_in_dollars === undefined) formData.bank_value_in_dollars = 0;
+    if (formData.discounts === undefined) formData.discounts = 0;
+    if (formData.extras === undefined) formData.extras = '';
+    if (formData.cert === undefined) formData.cert = '';
+  });
 
-  // State for modal visibility
-  let isValueModalOpen = false;
+  let valueModalOpen = $state(false);
 
-  // Reactive calculation for total deductions
-  $: totalDeductions = formData.deductions.reduce((sum, deduction) => {
-    const amount = Number(deduction.amount) || 0; 
-    return sum + amount;
-  }, 0);
+  let totalDeductions = $derived(
+    (formData.deductions ?? []).reduce((sum, d) => sum + (Number(d.amount) || 0), 0)
+  );
 
-  // Reactive calculation for lower cost value
-  $: apprasail_value_lower_cost = Math.max(0, (Number(formData.appraisal_value_trochez) || 0) * 0.92 - totalDeductions - (Number(formData.discounts) || 0));
+  let apprasailValueLowerCost = $derived(
+    Math.max(
+      0,
+      (Number(formData.appraisal_value_trochez) || 0) * 0.92 -
+        totalDeductions -
+        (Number(formData.discounts) || 0)
+    )
+  );
 
-  // Reactive calculation for lower bank value
-  $: apprasail_value_lower_bank = Math.max(0, (Number(formData.apprasail_value_bank) || 0) - totalDeductions - (Number(formData.discounts) || 0));
+  let apprasailValueLowerBank = $derived(
+    Math.max(
+      0,
+      (Number(formData.apprasail_value_bank) || 0) -
+        totalDeductions -
+        (Number(formData.discounts) || 0)
+    )
+  );
 
-  // Update apprasail_value_lower_cost and apprasail_value_lower_bank before submit
-  function triggerSubmit() {
-    formData.apprasail_value_lower_cost = apprasail_value_lower_cost; // Assign calculated value back to bound formData
-    formData.apprasail_value_lower_bank = apprasail_value_lower_bank; // Assign calculated value back to bound formData
-    dispatch('submit'); // Dispatch event AFTER updating formData
-  }
-
-  function triggerCancel() {
-    dispatch('cancel');
+  function handleSubmit(e) {
+    e.preventDefault();
+    formData.apprasail_value_lower_cost = apprasailValueLowerCost;
+    formData.apprasail_value_lower_bank = apprasailValueLowerBank;
+    onsubmit?.();
   }
 
   function addDeduction() {
-    if (formData.deductions.length < 9) { // Cambia el límite aquí
-      formData.deductions = [...formData.deductions, { description: '', amount: null }];
-    }
+    if ((formData.deductions ?? []).length >= 9) return;
+    formData.deductions = [...(formData.deductions ?? []), { description: '', amount: null }];
   }
 
   function removeDeduction(index) {
     formData.deductions = formData.deductions.filter((_, i) => i !== index);
   }
 
-  function openValueModal() {
-    isValueModalOpen = true;
-  }
-
-  function closeValueModal() {
-    isValueModalOpen = false;
-  }
-
-  $: requiredVehicleDescription = !isEdit;
+  let requiredVehicleDescription = $derived(!isEdit);
 </script>
 
-<form on:submit|preventDefault={triggerSubmit} class="bg-white rounded-lg shadow overflow-hidden">
-  <!-- New Header Section based on Image -->
-  <div class="p-6 border-b border-gray-200">
-    <div class="flex justify-between items-start gap-6 mb-4"> 
-      
-      <!-- Left Column: Appraisal Number (Static) -->
-      <div class="w-1/4"> 
-        <label for="appraisal_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Avalúo</label>
-        <p class="w-full p-1 border-b border-gray-400 text-sm font-semibold"> 
-          {formData.appraisal_number || 'N/A'} 
-        </p>
+<form onsubmit={handleSubmit} class="space-y-6">
+  <!-- Encabezado / metadatos -->
+  <Card>
+    <CardContent class="grid grid-cols-1 gap-4 p-6 md:grid-cols-4">
+      <div class="space-y-1.5 md:col-span-1">
+        <Label for="appraisal_date">Fecha del avalúo</Label>
+        <Input
+          id="appraisal_date"
+          type="date"
+          bind:value={formData.appraisal_date}
+          error={!!validationErrors?.appraisal_date}
+          required
+        />
+        {#if validationErrors?.appraisal_date}
+          <p class="text-xs text-destructive">{validationErrors.appraisal_date}</p>
+        {/if}
       </div>
+      <div class="space-y-1.5">
+        <Label for="cert">No. de certificado</Label>
+        <Input id="cert" type="text" bind:value={formData.cert} placeholder="Ej. 12345" />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="validity_days">Validez (días)</Label>
+        <Input id="validity_days" type="number" min="1" bind:value={formData.validity_days} placeholder="30" />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="validity_kms">Validez (km)</Label>
+        <Input id="validity_kms" type="number" min="1" bind:value={formData.validity_kms} placeholder="1000" />
+      </div>
+    </CardContent>
+  </Card>
 
-      <!-- Right Column: Date (Editable), Location (Static), Phone (Static), Number (Static) in a Box -->
-      <div class="w-1/3"> 
-        <div class="border border-gray-300 rounded-md p-2 space-y-1 text-right"> 
-          <div>
-            <input
-              id="appraisal_date"
-              type="date"
-              bind:value={formData.appraisal_date}
-              required
-              class="focus:outline-none text-lg text-right" 
-              class:border-red-500={validationErrors?.appraisal_date} 
-              class:border-b={!validationErrors?.appraisal_date} 
-              class:border-gray-400={!validationErrors?.appraisal_date} 
-            />
-            {#if validationErrors?.appraisal_date}
-              <p class="text-red-500 text-xs mt-1 text-right">{validationErrors.appraisal_date}</p>
-            {/if}
-          </div>
-          <div>
-            <label for="location" class="block w-full text-sm text-right uppercase"> 
-              SAN JOSE C.R 
-            </label>
-          </div>
-          <div>
-            <label for="phone" class="block w-full text-sm text-right">
-              Tel. 8794-4104
-            </label>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Certificate Number Field -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 pt-4 border-t border-gray-100"> 
-      <div>
-        <label for="cert" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. de Certificado</label>
-        <input
-          id="cert"
-          type="text"
-          bind:value={formData.cert}
-          placeholder="NÚMERO DE CERTIFICADO"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          spellcheck="false"
-        />
-      </div>
-      <div>
-        <label for="validity_days" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Validez (días)</label> 
-        <input
-          id="validity_days"
-          type="number"
-          min="1"
-          bind:value={formData.validity_days}
-          placeholder="DÍAS" 
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" 
-        />
-      </div>
-      <div>
-        <label for="validity_kms" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Validez (kilómetros)</label>
-        <input
-          id="validity_kms"
-          type="number"
-          min="1"
-          bind:value={formData.validity_kms}
-          placeholder="KM" 
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm" 
-        />
-      </div>
-    </div>
-  </div>
-  
-  <!-- Información del cliente -->
-  <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Información del Cliente</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <div>
-        <label for="applicant" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Solicitante *</label>
-        <input
+  <!-- Cliente -->
+  <Card>
+    <CardHeader>
+      <CardTitle>Información del cliente</CardTitle>
+    </CardHeader>
+    <CardContent class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div class="space-y-1.5">
+        <Label for="applicant">Solicitante <span class="text-destructive">*</span></Label>
+        <Input
           id="applicant"
           type="text"
           bind:value={formData.applicant}
+          error={!!validationErrors?.applicant}
+          placeholder="Nombre del solicitante"
           required
-          placeholder="SOLICITANTE"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          class:border-red-500={validationErrors?.applicant}
-          spellcheck="true"
-          lang="es"
         />
         {#if validationErrors?.applicant}
-          <p class="text-red-500 text-xs mt-1">{validationErrors.applicant}</p>
+          <p class="text-xs text-destructive">{validationErrors.applicant}</p>
         {/if}
       </div>
-      <div>
-        <label for="owner" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Propietario</label>
-        <input
-          id="owner"
-          type="text"
-          placeholder="PROPIETARIO"
-          bind:value={formData.owner}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          spellcheck="true"
-          lang="es"
-        />
+      <div class="space-y-1.5">
+        <Label for="owner">Propietario</Label>
+        <Input id="owner" type="text" bind:value={formData.owner} placeholder="Propietario" />
       </div>
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 
-  <!-- Información del vehículo -->
-  <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4 uppercase">Información del Vehículo</h2>
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-x-6 gap-y-4">
-      <!-- Row 1: Brand, Model/Desc (spans 2 cols), Year, Color -->
-      <div class="md:col-span-1">
-        <label for="brand" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Marca *</label>
-        <input
-          id="brand" type="text" bind:value={formData.brand} required placeholder="MARCA"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          class:border-red-500={validationErrors?.brand}
-          spellcheck="true"
-          lang="es"
+  <!-- Vehículo -->
+  <Card>
+    <CardHeader>
+      <CardTitle>Información del vehículo</CardTitle>
+    </CardHeader>
+    <CardContent class="grid grid-cols-1 gap-4 md:grid-cols-6">
+      <div class="space-y-1.5 md:col-span-2">
+        <Label for="brand">Marca <span class="text-destructive">*</span></Label>
+        <Input
+          id="brand"
+          type="text"
+          bind:value={formData.brand}
+          error={!!validationErrors?.brand}
+          placeholder="Toyota"
+          required
         />
-        {#if validationErrors?.brand} <p class="text-red-500 text-xs mt-1">{validationErrors.brand}</p> {/if}
+        {#if validationErrors?.brand}
+          <p class="text-xs text-destructive">{validationErrors.brand}</p>
+        {/if}
       </div>
-      <div class="md:col-span-2">
-        <label for="vehicle_description" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Descripción/Modelo *</label>
-        <input
+      <div class="space-y-1.5 md:col-span-3">
+        <Label for="vehicle_description">
+          Descripción / modelo {requiredVehicleDescription ? '*' : ''}
+        </Label>
+        <Input
           id="vehicle_description"
           type="text"
           bind:value={formData.vehicle_description}
+          error={!!validationErrors?.vehicle_description}
+          placeholder="Hilux 4x4 Cabina Doble"
           required={requiredVehicleDescription}
-          placeholder="MODELO"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          class:border-red-500={validationErrors?.vehicle_description}
-          spellcheck="true"
-          lang="es"
         />
-        {#if validationErrors?.vehicle_description} <p class="text-red-500 text-xs mt-1">{validationErrors.vehicle_description}</p> {/if}
-      </div>
-
-      <div class="md:col-span-1"></div> 
-
-      <div class="md:col-span-1">
-        <label for="model_year" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Año</label>
-        <input
-          id="model_year" type="number" min="1900" max={new Date().getFullYear() + 1} bind:value={formData.model_year} placeholder="AÑO"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-        />
-      </div>
-       <div class="md:col-span-1">
-        <label for="color" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Color</label>
-        <input
-          id="color" type="text" bind:value={formData.color} placeholder="COLOR"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          spellcheck="true"
-          lang="es"
-        />
-      </div>
-
-       <div class="md:col-span-1">
-        <label for="plate_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Placa</label>
-        <input
-          id="plate_number" type="text" bind:value={formData.plate_number} placeholder="PLACA"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-        />
-      </div>
-
-      <div class="md:col-span-1">
-        <label for="mileage" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Kilometraje</label>
-        <input
-          id="mileage" type="number" min="0" bind:value={formData.mileage} placeholder="KM"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-        />
-      </div>
-      <div class="md:col-span-1">
-        <label for="fuel_type" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Combustible</label>
-        <input
-          id="fuel_type" type="text" bind:value={formData.fuel_type} placeholder="COMB."
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          spellcheck="true"
-          lang="es"
-        />
-      </div>
-
-      <!-- Row 3: Engine Size, Extras -->
-      <div class="md:col-span-1"> 
-        <label for="engine_size" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Cilindraje (cc)</label>
-        <input
-          id="engine_size" type="number" min="0" step="0.1" bind:value={formData.engine_size} placeholder="CC"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-        />
-      </div>
-
- 
- 
-      <!-- Updated Extras Field (spans remaining 4 columns) -->
-      <div class="md:col-span-4">
-        <label for="extras" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Extras</label>
-        <input
-          id="extras"
-          type="text"
-          bind:value={formData.extras}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          placeholder="EXTRAS"
-          spellcheck="true"
-          autocorrect="on"
-          autocomplete="on"
-          lang="es"
-        />
-      </div>
-      <!-- Removed the empty placeholder div that was here -->
-
-      <!-- Row 4: Notes (Full Width) -->
-      <div class="md:col-span-5">
-        <label for="notes" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Observaciones</label>
-        <textarea
-          id="notes"
-          rows="2"
-          bind:value={formData.notes}
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          placeholder="OBSERVACIONES..."
-          spellcheck="true"
-          autocorrect="on"
-          autocomplete="on"
-          lang="es"
-        ></textarea>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Verificación de Números -->
-  <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4 uppercase">Verificación de Números</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-      <div>
-        <label for="vin" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">VIN (Físico)</label>
-        <input
-          id="vin" type="text" maxlength="17" bind:value={formData.vin} placeholder="VIN FÍSICO"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          class:border-red-500={validationErrors?.vin}
-        />
-        {#if validationErrors?.vin} <p class="text-red-500 text-xs mt-1">{validationErrors.vin}</p> {/if}
-      </div>
-
-      <div>
-        <label for="vin_card" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Numero de VIN en Tarjeta</label>
-        <input
-          id="vin_card" type="text" maxlength="17" bind:value={formData.vin_card} placeholder="VIN TARJETA"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          class:border-red-500={validationErrors?.vin_card}
-        />
-        {#if validationErrors?.vin_card} <p class="text-red-500 text-xs mt-1">{validationErrors.vin_card}</p> {/if}
-      </div>
-
-      <div>
-        <label for="engine_number" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">No. Motor (Físico)</label>
-        <input
-          id="engine_number" type="text" maxlength="17" bind:value={formData.engine_number} placeholder="MOTOR FÍSICO #"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          class:border-red-500={validationErrors?.engine_number}
-        />
-        {#if validationErrors?.engine_number} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number}</p> {/if}
-      </div>
-
-      <div>
-        <label for="engine_number_card" class="block text-xs font-medium text-gray-500 uppercase mb-0.5">Numero de Motor en Tarjeta</label>
-        <input
-          id="engine_number_card" type="text" maxlength="17" bind:value={formData.engine_number_card} placeholder="MOTOR TARJETA #"
-          class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-          class:border-red-500={validationErrors?.engine_number_card}
-        />
-        {#if validationErrors?.engine_number_card} <p class="text-red-500 text-xs mt-1">{validationErrors.engine_number_card}</p> {/if}
-      </div>
-    </div>
-  </div>
-
-  <!-- Deducciones -->
-  <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Deducciones</h2>
-    {#if formData.deductions.length > 0}
-      <div class="space-y-4 mb-4">
-        {#each formData.deductions as deduction, index (index)}
-          <div class="flex items-center space-x-3">
-            <div class="flex-grow grid grid-cols-2 gap-3">
-              <input
-                type="text"
-                placeholder="Descripción Deducción #{index + 1}"
-                bind:value={deduction.description}
-                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-                spellcheck="true"
-                lang="es"
-              />
-              <input
-                type="number"
-                placeholder="Monto Deducción #{index + 1}"
-                min="0"
-                step="0.01"
-                bind:value={deduction.amount}
-                class="w-full p-1 border-b border-gray-400 focus:outline-none focus:border-blue-500 text-sm"
-              />
-            </div>
-            <button 
-              type="button" 
-              on:click={() => removeDeduction(index)}
-              class="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition duration-150 ease-in-out"
-              aria-label="Eliminar deducción"
-            >
-              <!-- SVG icon -->
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-        {/each}
-      </div>
-
-      <!-- Display Total Deductions -->
-      <div class="mt-4 pt-4 border-t border-gray-200">
-        <p class="text-md font-semibold text-gray-700 text-right">
-          Total Deducciones:
-          <span class="text-red-600">
-            ₡ {totalDeductions.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} 
-          </span>
-        </p>
-      </div>
-    {/if}
-
-    {#if formData.deductions.length < 9} <!-- Cambia el límite aquí -->
-      <button 
-        type="button" 
-        on:click={addDeduction} 
-        class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
-      >
-        Agregar Deducción
-      </button>
-    {:else}
-       <p class="text-sm text-gray-500 mt-4">Máximo de 9 deducciones alcanzado.</p>
-    {/if}
-  </div>
-
-  <div class="p-6 border-b border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-800 mb-4">Valor del Avalúo</h2>
-    <div class="flex items-center mb-4">
-      <button 
-        type="button" 
-        on:click={openValueModal}
-        class="px-3 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm"
-        title="Establecer Valor Original"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-        </svg>
-      </button>
-    </div>
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">     
-      <!-- Valor Garantía Bancaria -->
-      <div>
-        <label for="apprasail_value_lower_bank" class="block text-xs font-medium text-gray-700 mb-1">Valor Garantía Bancaria</label>
-        <div class="w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 text-lg font-semibold text-center cursor-not-allowed">
-          ₡ {apprasail_value_lower_bank.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-        </div>
-      </div>
-      <!-- Valor Avalúo -->
-      <div>
-        <label for="apprasail_value_lower_cost" class="block text-xs font-medium text-gray-700 mb-1">Valor Avalúo</label>
-        <div class="w-full px-3 py-2 border border-gray-300 rounded-md bg-yellow-100 text-gray-700 text-lg font-semibold text-center cursor-not-allowed">
-          ₡ {apprasail_value_lower_cost.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-        </div>
-        {#if validationErrors?.appraisal_value_trochez}
-          <p class="text-red-500 text-xs mt-1">Error en Valor Avaluo Trochez (ver detalles)</p>
+        {#if validationErrors?.vehicle_description}
+          <p class="text-xs text-destructive">{validationErrors.vehicle_description}</p>
         {/if}
       </div>
-      <!-- Valor Dólares -->
+      <div class="space-y-1.5">
+        <Label for="model_year">Año</Label>
+        <Input
+          id="model_year"
+          type="number"
+          min="1900"
+          max={new Date().getFullYear() + 1}
+          bind:value={formData.model_year}
+        />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="color">Color</Label>
+        <Input id="color" type="text" bind:value={formData.color} placeholder="Negro" />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="plate_number">Placa</Label>
+        <Input id="plate_number" type="text" bind:value={formData.plate_number} placeholder="ABC123" />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="mileage">Kilometraje</Label>
+        <Input id="mileage" type="number" min="0" bind:value={formData.mileage} placeholder="100000" />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="fuel_type">Combustible</Label>
+        <Input id="fuel_type" type="text" bind:value={formData.fuel_type} placeholder="Diesel" />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="engine_size">Cilindraje</Label>
+        <Input
+          id="engine_size"
+          type="number"
+          min="0"
+          step="0.1"
+          bind:value={formData.engine_size}
+          placeholder="2.5"
+        />
+      </div>
+      <div class="space-y-1.5 md:col-span-6">
+        <Label for="extras">Extras</Label>
+        <Input id="extras" type="text" bind:value={formData.extras} placeholder="Equipamiento adicional" />
+      </div>
+      <div class="space-y-1.5 md:col-span-6">
+        <Label for="notes">Observaciones</Label>
+        <Textarea id="notes" bind:value={formData.notes} placeholder="Notas sobre el vehículo…" rows="3" />
+      </div>
+    </CardContent>
+  </Card>
+
+  <!-- Verificación de números -->
+  <Card>
+    <CardHeader>
+      <CardTitle>Verificación de números</CardTitle>
+      <p class="text-sm text-muted-foreground">VIN y número de motor: máximo 17 caracteres</p>
+    </CardHeader>
+    <CardContent class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div class="space-y-1.5">
+        <Label for="vin">VIN (físico)</Label>
+        <Input
+          id="vin"
+          type="text"
+          maxlength="17"
+          bind:value={formData.vin}
+          error={!!validationErrors?.vin}
+        />
+        {#if validationErrors?.vin}
+          <p class="text-xs text-destructive">{validationErrors.vin}</p>
+        {/if}
+      </div>
+      <div class="space-y-1.5">
+        <Label for="vin_card">VIN en tarjeta</Label>
+        <Input
+          id="vin_card"
+          type="text"
+          maxlength="17"
+          bind:value={formData.vin_card}
+          error={!!validationErrors?.vin_card}
+        />
+        {#if validationErrors?.vin_card}
+          <p class="text-xs text-destructive">{validationErrors.vin_card}</p>
+        {/if}
+      </div>
+      <div class="space-y-1.5">
+        <Label for="engine_number">No. motor (físico)</Label>
+        <Input
+          id="engine_number"
+          type="text"
+          maxlength="17"
+          bind:value={formData.engine_number}
+          error={!!validationErrors?.engine_number}
+        />
+        {#if validationErrors?.engine_number}
+          <p class="text-xs text-destructive">{validationErrors.engine_number}</p>
+        {/if}
+      </div>
+      <div class="space-y-1.5">
+        <Label for="engine_number_card">No. motor en tarjeta</Label>
+        <Input
+          id="engine_number_card"
+          type="text"
+          maxlength="17"
+          bind:value={formData.engine_number_card}
+          error={!!validationErrors?.engine_number_card}
+        />
+        {#if validationErrors?.engine_number_card}
+          <p class="text-xs text-destructive">{validationErrors.engine_number_card}</p>
+        {/if}
+      </div>
+    </CardContent>
+  </Card>
+
+  <!-- Deducciones -->
+  <Card>
+    <CardHeader class="flex flex-row items-center justify-between">
       <div>
-        <label for="appraisal_value_usd" class="block text-xs font-medium text-gray-700 mb-1">Valor (Dólares)</label>
-        <input
+        <CardTitle>Deducciones</CardTitle>
+        <p class="text-sm text-muted-foreground">Hasta 9 deducciones</p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-muted-foreground">Total</p>
+        <p class="text-lg font-semibold tabular-nums text-destructive">{formatCRC(totalDeductions)}</p>
+      </div>
+    </CardHeader>
+    <CardContent>
+      {#if (formData.deductions ?? []).length === 0}
+        <p class="rounded-md border border-dashed py-6 text-center text-sm text-muted-foreground">
+          Sin deducciones agregadas
+        </p>
+      {:else}
+        <div class="space-y-3">
+          {#each formData.deductions as deduction, index (index)}
+            <div class="flex items-center gap-2">
+              <div class="grid flex-1 grid-cols-1 gap-2 md:grid-cols-[1fr_180px]">
+                <Input
+                  type="text"
+                  bind:value={deduction.description}
+                  placeholder="Descripción de la deducción #{index + 1}"
+                />
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  bind:value={deduction.amount}
+                  placeholder="Monto"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onclick={() => removeDeduction(index)}
+                aria-label="Eliminar deducción"
+                class="text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 size={16} />
+              </Button>
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if (formData.deductions ?? []).length < 9}
+        <Button type="button" variant="outline" size="sm" onclick={addDeduction} class="mt-4">
+          <Plus size={14} /> Agregar deducción
+        </Button>
+      {:else}
+        <p class="mt-3 text-xs text-muted-foreground">Máximo de 9 deducciones alcanzado.</p>
+      {/if}
+    </CardContent>
+  </Card>
+
+  <!-- Valores -->
+  <Card>
+    <CardHeader class="flex flex-row items-center justify-between">
+      <div>
+        <CardTitle>Valor del avalúo</CardTitle>
+        <p class="text-sm text-muted-foreground">Valores calculados y de referencia</p>
+      </div>
+      <Button type="button" variant="outline" size="sm" onclick={() => (valueModalOpen = true)}>
+        <Calculator size={14} /> Ajustar valores
+      </Button>
+    </CardHeader>
+    <CardContent class="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div class="rounded-lg border bg-amber-50 p-4">
+        <p class="text-xs font-medium uppercase text-amber-700">Garantía bancaria</p>
+        <p class="mt-1 text-2xl font-semibold tabular-nums text-amber-900">
+          {formatCRC(apprasailValueLowerBank)}
+        </p>
+      </div>
+      <div class="rounded-lg border bg-amber-50 p-4">
+        <p class="text-xs font-medium uppercase text-amber-700">Valor avalúo</p>
+        <p class="mt-1 text-2xl font-semibold tabular-nums text-amber-900">
+          {formatCRC(apprasailValueLowerCost)}
+        </p>
+        {#if validationErrors?.appraisal_value_trochez}
+          <p class="mt-1 text-xs text-destructive">Revisá el valor Trochez</p>
+        {/if}
+      </div>
+      <div class="space-y-1.5">
+        <Label for="appraisal_value_usd">Valor (USD)</Label>
+        <Input
           id="appraisal_value_usd"
           type="number"
           min="0"
           step="0.01"
           bind:value={formData.appraisal_value_usd}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold text-center"
+          class="text-center text-lg font-semibold"
         />
       </div>
-      <!-- Valor Garantía Bancaria en Dólares -->
-      <div>
-        <label for="bank_value_in_dollars" class="block text-xs font-medium text-gray-700 mb-1">Valor Garantía Bancaria (USD)</label>
-        <input
+      <div class="space-y-1.5">
+        <Label for="bank_value_in_dollars">Garantía bancaria (USD)</Label>
+        <Input
           id="bank_value_in_dollars"
           type="number"
           min="0"
           step="0.01"
           bind:value={formData.bank_value_in_dollars}
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-lg font-semibold text-center"
           placeholder="0.00"
+          class="text-center text-lg font-semibold"
         />
       </div>
- 
-    </div>
-  </div>
+    </CardContent>
+  </Card>
 
-  <!-- Botones de Acción -->
-  <div class="p-6 bg-gray-50 flex justify-end items-center space-x-4">
-    <button 
-      type="button" 
-      on:click={triggerCancel}
-      class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50"
-      disabled={isSubmitting}
-    >
+  <!-- Acciones -->
+  <div class="flex flex-col-reverse justify-end gap-2 md:flex-row">
+    <Button type="button" variant="outline" onclick={oncancel} disabled={isSubmitting}>
       Cancelar
-    </button>
-    <button 
-      type="submit"
-      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      disabled={isSubmitting}
-    >
+    </Button>
+    <Button type="submit" disabled={isSubmitting}>
       {#if isSubmitting}
-        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Guardando...
+        <Spinner size={14} /> Guardando…
       {:else}
-        Guardar Avalúo
+        <Save size={16} /> {isEdit ? 'Guardar cambios' : 'Guardar avalúo'}
       {/if}
-    </button>
+    </Button>
   </div>
 </form>
 
-<!-- Value Details Modal -->
-{#if isValueModalOpen}
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" on:click|self={closeValueModal}>
-    <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
-      <h3 class="text-lg font-semibold mb-4">Detalles del Valor</h3>
-      
-      <div class="space-y-4">
-        <div>
-          <label for="modal_appraisal_value_trochez" class="block text-sm font-medium text-gray-700 mb-1">Valor Avaluo Trochez *</label>
-          <input
-            id="modal_appraisal_value_trochez"
-            type="number"
-            min="0.01"
-            step="0.01"
-            bind:value={formData.appraisal_value_trochez}
-            required
-            class="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            class:border-red-500={validationErrors?.appraisal_value_trochez}
-          />
-          {#if validationErrors?.appraisal_value_trochez}
-            <p class="text-red-500 text-xs mt-1">{validationErrors.appraisal_value_trochez}</p>
-          {/if}
-        </div>
-        
-        <div>
-          <label for="modal_apprasail_value_bank" class="block text-sm font-medium text-gray-700 mb-1">Valor Bancario</label>
-          <input
-            id="modal_apprasail_value_bank"
-            type="number"
-            min="0"
-            step="0.01"
-            bind:value={formData.apprasail_value_bank}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            class:border-red-500={validationErrors?.apprasail_value_bank} 
-          />
-           {#if validationErrors?.apprasail_value_bank} /* Add validation if needed */
-            <p class="text-red-500 text-xs mt-1">{validationErrors.apprasail_value_bank}</p>
-          {/if}
-        </div>
-        
-        <div>
-          <label for="modal_discounts" class="block text-sm font-medium text-gray-700 mb-1">Descuento</label>
-          <input
-            id="modal_discounts"
-            type="number"
-            min="0"
-            step="0.01"
-            bind:value={formData.discounts}
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="0.00"
-          />
-          {#if validationErrors?.discounts}
-            <p class="text-red-500 text-xs mt-1">{validationErrors.discounts}</p>
-          {/if}
-        </div>
-        
-      </div>
-
-      <div class="mt-6 flex justify-end space-x-3">
-        <button 
-          type="button" 
-          on:click={closeValueModal}
-          class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-        >
-          Cerrar
-        </button>
-      </div>
+<!-- Modal de detalles del valor -->
+<Dialog bind:open={valueModalOpen} title="Detalles del valor" description="Valores base utilizados para los cálculos">
+  <div class="space-y-4">
+    <div class="space-y-1.5">
+      <Label for="modal_appraisal_value_trochez">Valor Trochez <span class="text-destructive">*</span></Label>
+      <Input
+        id="modal_appraisal_value_trochez"
+        type="number"
+        min="0.01"
+        step="0.01"
+        bind:value={formData.appraisal_value_trochez}
+        error={!!validationErrors?.appraisal_value_trochez}
+        required
+      />
+      {#if validationErrors?.appraisal_value_trochez}
+        <p class="text-xs text-destructive">{validationErrors.appraisal_value_trochez}</p>
+      {/if}
+    </div>
+    <div class="space-y-1.5">
+      <Label for="modal_apprasail_value_bank">Valor bancario</Label>
+      <Input
+        id="modal_apprasail_value_bank"
+        type="number"
+        min="0"
+        step="0.01"
+        bind:value={formData.apprasail_value_bank}
+      />
+    </div>
+    <div class="space-y-1.5">
+      <Label for="modal_discounts">Descuento</Label>
+      <Input
+        id="modal_discounts"
+        type="number"
+        min="0"
+        step="0.01"
+        bind:value={formData.discounts}
+        placeholder="0.00"
+      />
     </div>
   </div>
-{/if}
+  <div class="mt-6 flex justify-end gap-2">
+    <Button variant="outline" onclick={() => (valueModalOpen = false)}>Cerrar</Button>
+  </div>
+</Dialog>

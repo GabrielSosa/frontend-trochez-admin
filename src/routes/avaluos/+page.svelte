@@ -1,767 +1,565 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import Navbar from '$lib/components/Navbar.svelte';
-  import { ApiUrls, apiFetch } from '$lib/api';
-  import { showSuccess, showError, showInfo } from '$lib/utils/toast.js';
-  import { confirmDuplicate, confirmDelete } from '$lib/utils/confirm.js';
+  import { ApiUrls, apiJson } from '$lib/api.js';
+  import { auth } from '$lib/stores/auth.svelte.js';
+  import { avaluosStore } from '$lib/stores/avaluos.svelte.js';
+  import { cn, formatCRC, formatDate, debounce } from '$lib/utils.js';
+  import { showSuccess, showError } from '$lib/utils/toast.js';
+  import { confirmDelete, confirmDuplicate, confirmAction } from '$lib/utils/confirm.js';
+  import { printCertificate } from '$lib/utils/certificate.js';
+  import Papa from 'papaparse';
+  import {
+    Plus,
+    RefreshCw,
+    Search,
+    Filter,
+    Download,
+    Trash2,
+    Pencil,
+    Copy,
+    Printer,
+    MoreHorizontal,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
+    ChevronLeft,
+    ChevronRight,
+    ChevronsLeft,
+    ChevronsRight,
+    X
+  } from 'lucide-svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
+  import Card from '$lib/components/ui/Card.svelte';
+  import Checkbox from '$lib/components/ui/Checkbox.svelte';
+  import Badge from '$lib/components/ui/Badge.svelte';
+  import Spinner from '$lib/components/ui/Spinner.svelte';
+  import Select from '$lib/components/ui/Select.svelte';
+  import DropdownMenu from '$lib/components/ui/DropdownMenu.svelte';
+  import DropdownItem from '$lib/components/ui/DropdownItem.svelte';
 
-  let user = null;
-  let searchQuery = '';
-  let avaluos = [];
-  let filteredAvaluos = [];
-  let isLoading = true;
-  let searchTimeout = null;
-  let isSearching = false;
-  
-  // Pagination variables
-  let currentPage = 1;
-  let itemsPerPage = 10;
-  let totalPages = 0;
-  let total = 0;
-  let paginatedAvaluos = [];
-  let generatingCertificate = false;
-  let generatingCertificateId = null;
-  let isChangingPage = false;
-  let duplicatingAvaluo = false;
-  let duplicatingAvaluoId = null;
-  let deletingAvaluo = false;
-  let deletingAvaluoId = null;
-  
+  const store = avaluosStore;
+  let s = $derived(store.state);
 
+  let selected = $state(new Set());
+  let showFilters = $state(false);
+  let busyAction = $state(null); // {type:'cert'|'duplicate'|'delete', id}
 
+  let filterBrand = $state('');
+  let filterColor = $state('');
+  let filterFrom = $state('');
+  let filterTo = $state('');
+  let searchInput = $state('');
 
-  // Function to load avalúos data with backend pagination
-  async function loadAvaluos(page = 1, search = '') {
-    try {
-      isLoading = true;
-      
-      let url;
-      let params;
-      
-      if (search && search.trim()) {
-        // Use search endpoint
-        params = new URLSearchParams({
-          query: search.trim(),
-          page: page.toString(),
-          limit: itemsPerPage.toString()
-        });
-        url = `${ApiUrls.AVALUOS.search}?${params}`;
-      } else {
-        // Use regular endpoint
-        params = new URLSearchParams({
-          page: page.toString(),
-          limit: itemsPerPage.toString()
-        });
-        url = `${ApiUrls.AVALUOS.getAll}?${params}`;
-      }
-      
-const httpResponse = await apiFetch(url);
-        const response = await httpResponse.json();
-
-        // New API format: { items, total, skip, limit }
-        let data;
-        if (Array.isArray(response.items)) {
-          data = response.items;
-          total = response.total ?? data.length;
-          totalPages = Math.ceil(total / itemsPerPage);
-        } else if (response.data && response.pagination) {
-          data = response.data;
-          total = response.pagination.total_count;
-          totalPages = response.pagination.total_pages;
-        } else if (response.avaluos && response.total !== undefined) {
-          data = response.avaluos;
-          total = response.total;
-          totalPages = response.totalPages || Math.ceil(total / itemsPerPage);
-        } else {
-          data = Array.isArray(response) ? response : [];
-          total = data.length;
-          totalPages = 1;
-        }
-      
-      avaluos = data.map(item => ({
-        id: item.id,
-        vehicle_appraisal_id: item.vehicle_appraisal_id || item.id,
-        fecha: item.appraisal_date || '',
-        cliente: item.applicant || '',
-        vehiculo: `${item.brand || ''} ${item.vehicle_description || ''} ${item.model_year || ''}`.trim(),
-        placa: item.plate_number || '',
-        valor: item.appraisal_value_trochez, 
-        color: item.color || '',
-        kilometraje: item.mileage || '',
-        combustible: item.fuel_type || '',
-        motor: item.engine_size || '',
-        propietario: item.owner || '',
-        valorUSD: item.appraisal_value_usd,
-        vin: item.vin || '',
-        numeroMotor: item.engine_number || '',
-        notas: item.notes || '',
-        validezDias: item.validity_days,
-        validezKms: item.validity_kms,
-        extras: item.extras || '',
-        deduccion: item.deductions || '',
-        cert: item.cert || ''
-      }));
-      
-      // Update pagination variables
-      filteredAvaluos = [...avaluos];
-      currentPage = page;
-      updatePageData();
-      
-      // Clear any previous search results to avoid duplicates
-      if (search) {
-        // If searching, we only want the current page results
-        filteredAvaluos = [...avaluos];
-      }
-      
-
-      
-    } catch (error) {
-      // Provide more detailed error information
-      let errorMessage = 'Error al cargar los avalúos.';
-      
-      if (error.status === 401) {
-        errorMessage = 'Error de autenticación. Por favor, inicie sesión nuevamente.';
-        // Redirect to login page after a short delay
-        setTimeout(() => goto('/login'), 2000);
-      } else if (error.message) {
-        errorMessage += ' ' + error.message;
-      }
-      
-      // Provide some feedback to the user
-      notifications.error(errorMessage);
-    } finally {
-      isLoading = false;
-    }
-  }
-
-  onMount(async () => {
-    // Get user data from localStorage if available
-    const userData = localStorage.getItem('userData');
-    if (userData) {
-      try {
-        user = JSON.parse(userData);
-      } catch (e) {
-        
-      }
-    }
-
-    // Load avalúos data
-    await loadAvaluos(1, '');
-
-    // Add visibility change listener to reload data when returning from other pages
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Reload data when page becomes visible (user returns from create/edit)
-        loadAvaluos(1, searchQuery);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    // Cleanup function
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+  // Sync local filter inputs with the store (one-way: store -> inputs on initial load).
+  let syncedOnce = false;
+  $effect(() => {
+    if (syncedOnce) return;
+    filterBrand = s.filters.brand;
+    filterColor = s.filters.color;
+    filterFrom = s.filters.from;
+    filterTo = s.filters.to;
+    searchInput = s.search;
+    syncedOnce = true;
   });
 
-  // Search avalúos using backend with debounce
-  function handleSearch() {
-    // Clear previous timeout
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
+  onMount(() => {
+    if (!auth.isAuthenticated) {
+      goto('/login');
+      return;
     }
-    
-    // Show searching indicator
-    isSearching = true;
-    
-    // Set new timeout for 500ms
-    searchTimeout = setTimeout(async () => {
-      // Reset to first page when searching
-      currentPage = 1;
-      await loadAvaluos(currentPage, searchQuery);
-      
-      // Hide searching indicator
-      isSearching = false;
-    }, 500);
-  }
-  
-  // Update the current page data (now using backend pagination)
-  function updatePageData() {
-    // With backend pagination, the data is already paginated
-    paginatedAvaluos = [...filteredAvaluos];
-  }
-  
-  // Helper function to create array for pagination
-  function createPageArray(count) {
-    return Array.from({ length: count }, (_, i) => i + 1);
-  }
-  
-  // Go to specific page using backend
-  async function goToPage(page) {
-    if (page >= 1 && page <= totalPages && !isChangingPage) {
-      isChangingPage = true;
-      currentPage = page;
-      try {
-        await loadAvaluos(page, searchQuery);
-      } finally {
-        isChangingPage = false;
-      }
-    }
+    // Always (re)load on mount — using the cached state for the first paint avoids flicker.
+    store.load();
+  });
+
+  const debouncedSearch = debounce((value) => {
+    selected = new Set();
+    store.setSearch(value);
+  }, 350);
+
+  function onSearchInput() {
+    debouncedSearch(searchInput);
   }
 
-  // Navigate to create new avalúo page
-  function handleCreateNew() {
-    goto('/avaluos/nuevo');
+  function toggleSort(column) {
+    const same = s.sort.column === column;
+    const direction = same && s.sort.direction === 'asc' ? 'desc' : same ? 'asc' : 'desc';
+    selected = new Set();
+    store.setSort(column, direction);
   }
 
-  // Format currency
-  function formatCurrency(value) {
-    return new Intl.NumberFormat('es-CR', {
-      style: 'currency',
-      currency: 'CRC'
-    }).format(value);
+  function applyFilters() {
+    selected = new Set();
+    store.setFilters({
+      brand: filterBrand,
+      color: filterColor,
+      from: filterFrom,
+      to: filterTo
+    });
   }
 
-  // Format date
-  function formatDate(dateString) {
-    if (!dateString) return '';
-    
-    const date = new Date(dateString);
-    
-    // Check if the date is valid
-    if (isNaN(date.getTime())) {
-      return '';
-    }
-    
-    return new Intl.DateTimeFormat('es-CR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    }).format(date);
+  function clearFilters() {
+    filterBrand = '';
+    filterColor = '';
+    filterFrom = '';
+    filterTo = '';
+    selected = new Set();
+    store.setFilters({ brand: '', color: '', from: '', to: '' });
   }
-  
-  // Duplicate avalúo function
-  async function showDuplicateConfirmDialog(avaluoId) {
-    const confirmed = await confirmDuplicate();
-    if (confirmed) {
-      executeDuplicate(avaluoId);
+
+  async function refreshAll() {
+    searchInput = '';
+    filterBrand = '';
+    filterColor = '';
+    filterFrom = '';
+    filterTo = '';
+    selected = new Set();
+    await store.reset();
+    showSuccess('Datos actualizados');
+  }
+
+  function toggleAll() {
+    if (selected.size === s.items.length && s.items.length > 0) {
+      selected = new Set();
+    } else {
+      selected = new Set(s.items.map((it) => it.vehicle_appraisal_id));
     }
   }
 
-  async function executeDuplicate(avaluoId) {
+  function toggleOne(id) {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    selected = next;
+  }
+
+  async function deleteOne(id) {
+    const ok = await confirmDelete();
+    if (!ok) return;
     try {
-      // Set loading state
-      duplicatingAvaluo = true;
-      duplicatingAvaluoId = avaluoId;
-      
-      // Start safety timeout
-      resetStuckStates();
+      busyAction = { type: 'delete', id };
+      await apiJson(ApiUrls.AVALUOS.delete(id), { method: 'DELETE' });
+      showSuccess('Avalúo eliminado');
+      await store.load();
+    } catch (e) {
+      showError(e.message ?? 'No se pudo eliminar');
+    } finally {
+      busyAction = null;
+    }
+  }
 
-      const token = localStorage.getItem('jwtToken');
-      if (!token) {
-        showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
-        setTimeout(() => goto('/login'), 1000);
-        return;
-      }
-
-      const response = await fetch(`${ApiUrls.AVALUOS.getAll}/${avaluoId}/duplicate`, {
+  async function bulkDelete() {
+    const ids = Array.from(selected);
+    if (!ids.length) return;
+    const ok = await confirmAction({
+      title: `¿Eliminar ${ids.length} avalúo(s)?`,
+      message: 'Esta acción no se puede deshacer.',
+      confirmText: 'Eliminar',
+      variant: 'destructive'
+    });
+    if (!ok) return;
+    try {
+      await apiJson(ApiUrls.AVALUOS.bulkDelete, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
+        body: JSON.stringify({ ids })
       });
-
-      if (!response.ok) {
-        throw new Error(`Error al duplicar el avalúo: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.vehicle_appraisal_id) {
-        showSuccess('Avalúo duplicado exitosamente');
-        // Redirect to edit page with the new ID
-        goto(`/avaluos/${data.vehicle_appraisal_id}/editar`);
-      } else {
-        throw new Error('No se recibió el ID del avalúo duplicado');
-      }
-    } catch (error) {
-      showError(`Error al duplicar el avalúo: ${error.message}`);
-      // Ensure states are reset even on error
-      duplicatingAvaluo = false;
-      duplicatingAvaluoId = null;
-    } finally {
-      // Reset loading state
-      duplicatingAvaluo = false;
-      duplicatingAvaluoId = null;
+      showSuccess(`${ids.length} avalúo(s) eliminado(s)`);
+      selected = new Set();
+      await store.load();
+    } catch (e) {
+      showError(e.message ?? 'No se pudo eliminar');
     }
   }
 
-  // Delete avalúo function
-  async function showDeleteConfirmDialog(avaluoId) {
-    const confirmed = await confirmDelete();
-    if (confirmed) {
-      executeDelete(avaluoId);
-    }
-  }
-  
-  // Safety timeout to reset states if they get stuck
-  function resetStuckStates() {
-    setTimeout(() => {
-      if (deletingAvaluo) {
-        deletingAvaluo = false;
-        deletingAvaluoId = null;
-        console.warn('Reset stuck deleting state');
-      }
-      if (duplicatingAvaluo) {
-        duplicatingAvaluo = false;
-        duplicatingAvaluoId = null;
-        console.warn('Reset stuck duplicating state');
-      }
-      if (generatingCertificate) {
-        generatingCertificate = false;
-        generatingCertificateId = null;
-        console.warn('Reset stuck generating certificate state');
-      }
-    }, 10000); // 10 seconds timeout
-  }
-
-  async function executeDelete(avaluoId) {
+  async function duplicateOne(id) {
+    const ok = await confirmDuplicate();
+    if (!ok) return;
     try {
-      // Set loading state
-      deletingAvaluo = true;
-      deletingAvaluoId = avaluoId;
-      
-      // Start safety timeout
-      resetStuckStates();
-
-      const token = localStorage.getItem('jwtToken');
-      if (!token) {
-        showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
-        setTimeout(() => goto('/login'), 1000);
-        return;
-      }
-
-      const response = await fetch(`${ApiUrls.AVALUOS.getAll}/${avaluoId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`Error al eliminar el avalúo: ${response.status} ${response.statusText}`);
-      }
-
-      // Refresh the list
-      await loadAvaluos(currentPage, searchQuery);
-      showSuccess('Avalúo eliminado exitosamente');
-    } catch (error) {
-      showError(`Error al eliminar el avalúo: ${error.message}`);
-      // Ensure states are reset even on error
-      deletingAvaluo = false;
-      deletingAvaluoId = null;
+      busyAction = { type: 'duplicate', id };
+      await apiJson(ApiUrls.AVALUOS.duplicate(id), { method: 'POST' });
+      showSuccess('Avalúo duplicado');
+      await store.load();
+    } catch (e) {
+      showError(e.message ?? 'No se pudo duplicar');
     } finally {
-      // Reset loading state
-      deletingAvaluo = false;
-      deletingAvaluoId = null;
+      busyAction = null;
     }
   }
 
-  // Open certificate with JWT token - Improved to avoid popup blockers
-  async function openCertificate(avaluoId) {
+  async function handlePrint(id) {
+    busyAction = { type: 'cert', id };
     try {
-      const token = localStorage.getItem('jwtToken');
-      if (!token) {
-        showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
-        setTimeout(() => goto('/login'), 1000);
-        return;
-      }
-
-      generatingCertificate = true;
-      generatingCertificateId = avaluoId;
-      resetStuckStates();
-
-      const response = await fetch(ApiUrls.CERTIFICADOS.get(avaluoId), {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-
-      if (!response.ok) {
-        let errMsg = `Error ${response.status}`;
-        try { const j = await response.json(); errMsg = j.detail || j.message || errMsg; } catch(e) {}
-        throw new Error(errMsg);
-      }
-
-      const contentType = response.headers.get('content-type') ?? '';
-
-      if (contentType.includes('application/pdf')) {
-        // Real PDF binary
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const newWin = window.open(url, '_blank');
-        if (!newWin) {
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `certificado_${avaluoId}.pdf`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          showInfo('El certificado se está descargando. Revisa tu carpeta de descargas.');
-        }
-      } else {
-        // HTML certificate — render in new window regardless of Content-Type header
-        const htmlText = await response.text();
-
-        // Surface JSON errors
-        if (htmlText.trimStart().startsWith('{')) {
-          try {
-            const j = JSON.parse(htmlText);
-            throw new Error(j.detail || j.message || 'Error al generar el certificado');
-          } catch(e) {
-            if (!(e instanceof SyntaxError)) throw e;
-          }
-        }
-
-        const newWin = window.open('', '_blank');
-        if (newWin) {
-          newWin.document.open();
-          newWin.document.write(htmlText);
-          newWin.document.close();
-          newWin.onload = () => newWin.print();
-          setTimeout(() => { try { newWin.print(); } catch(e2) {} }, 800);
-        } else {
-          // Popup blocked fallback — download as HTML file
-          const blob = new Blob([htmlText], { type: 'text/html; charset=utf-8' });
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `certificado_${avaluoId}.html`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          showInfo('El certificado se descargó. Ábrelo en el navegador y usa Imprimir → Guardar como PDF.');
-        }
-      }
-    } catch (error) {
-      showError(`Error al obtener el certificado: ${error.message}`);
+      await printCertificate(id);
     } finally {
-      generatingCertificate = false;
-      generatingCertificateId = null;
+      busyAction = null;
     }
   }
+
+  function exportCSV(scope = 'page') {
+    const rows = scope === 'selection' ? s.items.filter((r) => selected.has(r.vehicle_appraisal_id)) : s.items;
+    if (!rows.length) {
+      showError('No hay registros para exportar');
+      return;
+    }
+    const data = rows.map((r) => ({
+      ID: r.vehicle_appraisal_id,
+      Certificado: r.cert ?? '',
+      Fecha: r.appraisal_date ?? '',
+      Solicitante: r.applicant ?? '',
+      Propietario: r.owner ?? '',
+      Marca: r.brand ?? '',
+      Modelo: r.vehicle_description ?? '',
+      Año: r.model_year ?? '',
+      Color: r.color ?? '',
+      Placa: r.plate_number ?? '',
+      Kilometraje: r.mileage ?? '',
+      VIN: r.vin ?? '',
+      Valor_CRC: r.appraisal_value_trochez ?? '',
+      Valor_USD: r.appraisal_value_usd ?? ''
+    }));
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `avaluos_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showSuccess(`${rows.length} registro(s) exportados`);
+  }
+
+  // Pagination derivations
+  let totalPages = $derived(Math.max(1, Math.ceil(s.total / s.limit)));
+  let pageStart = $derived(s.total === 0 ? 0 : (s.page - 1) * s.limit + 1);
+  let pageEnd = $derived(Math.min(s.page * s.limit, s.total));
+  let allSelected = $derived(s.items.length > 0 && selected.size === s.items.length);
+  let someSelected = $derived(selected.size > 0 && selected.size < s.items.length);
+  let activeFiltersCount = $derived(
+    [s.filters.brand, s.filters.color, s.filters.from, s.filters.to].filter(Boolean).length
+  );
+
+  const columns = [
+    { key: 'vehicle_appraisal_id', label: 'ID', sortable: true, align: 'left' },
+    { key: 'cert', label: 'Cert.', sortable: false, align: 'left' },
+    { key: 'appraisal_date', label: 'Fecha', sortable: true, align: 'left' },
+    { key: 'applicant', label: 'Cliente', sortable: true, align: 'left' },
+    { key: 'brand', label: 'Vehículo', sortable: true, align: 'left' },
+    { key: 'plate_number', label: 'Placa', sortable: true, align: 'left' },
+    { key: 'appraisal_value_trochez', label: 'Valor', sortable: true, align: 'right' }
+  ];
 </script>
 
-<div class="min-h-screen bg-gray-50">
-  <Navbar {user} />
-
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-800">Gestión de Avalúos</h1>
-      <div class="flex gap-2">
-        <button 
-          on:click={() => loadAvaluos(1, searchQuery)}
-          disabled={isLoading}
-          class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-          </svg>
-          {isLoading ? 'Actualizando...' : 'Actualizar'}
-        </button>
-        <button 
-          on:click={handleCreateNew}
-          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
-          </svg>
-          Nuevo Avalúo
-        </button>
-      </div>
+<div class="space-y-6">
+  <!-- Page header -->
+  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold tracking-tight">Avalúos</h1>
+      <p class="text-sm text-muted-foreground">
+        {s.total} {s.total === 1 ? 'registro' : 'registros'} en total
+      </p>
     </div>
-
-        <!-- Search and filters -->
-    <div class="bg-white rounded-lg shadow p-4 mb-6">
-      <div class="flex-1">
-        <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Buscar Avalúos</label>
-        <div class="relative">
-          <input
-            id="search"
-            type="text"
-            bind:value={searchQuery}
-            on:input={handleSearch}
-            placeholder="Buscar por placa, cliente, vehículo, VIN, certificado..."
-            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
-          />
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            {#if isSearching}
-              <div class="animate-spin h-5 w-5 border-b-2 border-blue-600 rounded-full"></div>
-            {:else}
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
-              </svg>
-            {/if}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Avalúos table -->
-    <div class="bg-white rounded-lg shadow overflow-hidden max-w-full">
-      {#if isLoading}
-        <div class="p-8 flex justify-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      {:else if filteredAvaluos.length === 0}
-        <div class="p-8 text-center text-gray-500">
-          No se encontraron avalúos que coincidan con la búsqueda.
-        </div>
-      {:else if paginatedAvaluos.length === 0 && filteredAvaluos.length > 0}
-        <div class="p-8 text-center text-gray-500">
-          Cargando datos para la página actual...
-        </div>
-      {:else}
-        <div class="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 md:rounded-lg" style="scrollbar-width: thin; scrollbar-color: #d1d5db #f3f4f6;">
-          <table class="min-w-full divide-y divide-gray-200" style="min-width: 900px;">
-            <thead class="bg-gray-50">
-              <tr>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No. Certificado</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehículo</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Placa</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Valor</th>
-                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              {#each paginatedAvaluos as avaluo (avaluo.vehicle_appraisal_id)}
-                <tr class="hover:bg-gray-50">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{avaluo.vehicle_appraisal_id}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{avaluo.cert || 'N/A'}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(avaluo.fecha)}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.cliente}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.vehiculo}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.placa}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatCurrency(avaluo.valor)}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{avaluo.color}</td>
-                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div class="flex items-center justify-end space-x-2">
-                      <!-- Editar -->
-                      <a 
-                        href={`/avaluos/${avaluo.vehicle_appraisal_id}/editar`} 
-                        class="p-2 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-full transition-colors duration-200 {duplicatingAvaluo || deletingAvaluo || generatingCertificate ? 'opacity-50 pointer-events-none' : ''}"
-                        title="Editar avalúo"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      </a>
-                      
-                      <!-- Duplicar -->
-                      <button 
-                        on:click={() => showDuplicateConfirmDialog(avaluo.vehicle_appraisal_id)}
-                        class="p-2 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-full transition-colors duration-200"
-                        disabled={duplicatingAvaluo}
-                        title="Duplicar avalúo"
-                      >
-                        {#if duplicatingAvaluo && duplicatingAvaluoId === avaluo.vehicle_appraisal_id}
-                          <div class="animate-spin h-4 w-4 border-b-2 border-blue-600 rounded-full"></div>
-                        {:else}
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                          </svg>
-                        {/if}
-                      </button>
-                      
-                      <!-- Certificado -->
-                      <button 
-                        on:click={() => openCertificate(avaluo.vehicle_appraisal_id)} 
-                        class="p-2 text-green-600 hover:text-green-900 hover:bg-green-50 rounded-full transition-colors duration-200"
-                        disabled={generatingCertificate || duplicatingAvaluo || deletingAvaluo}
-                        title="Imprimir certificado"
-                      >
-                        {#if generatingCertificate && generatingCertificateId === avaluo.vehicle_appraisal_id}
-                          <div class="animate-spin h-4 w-4 border-b-2 border-green-600 rounded-full"></div>
-                        {:else}
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clip-rule="evenodd" />
-                          </svg>
-                        {/if}
-                      </button>
-                      
-                      <!-- Eliminar -->
-                      <button 
-                        on:click={() => showDeleteConfirmDialog(avaluo.vehicle_appraisal_id)}
-                        class="p-2 text-red-600 hover:text-red-900 hover:bg-red-50 rounded-full transition-colors duration-200"
-                        disabled={deletingAvaluo}
-                        title="Eliminar avalúo"
-                      >
-                        {#if deletingAvaluo && deletingAvaluoId === avaluo.vehicle_appraisal_id}
-                          <div class="animate-spin h-4 w-4 border-b-2 border-red-600 rounded-full"></div>
-                        {:else}
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
-                          </svg>
-                        {/if}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-        
-        <!-- Pagination controls -->
-
-        
-        {#if totalPages > 1}
-          <div class="px-6 py-4 flex items-center justify-between border-t border-gray-200">
-            <div class="flex-1 flex justify-between sm:hidden">
-              <div class="flex items-center space-x-2">
-                <label for="itemsPerPageMobile" class="text-xs text-gray-700">Registros:</label>
-                <select
-                  id="itemsPerPageMobile"
-                  bind:value={itemsPerPage}
-                  on:change={() => loadAvaluos(1, searchQuery)}
-                  class="px-2 py-1 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
-              <div class="flex space-x-2">
-                <button 
-                  on:click={() => goToPage(currentPage - 1)} 
-                  disabled={currentPage === 1 || isChangingPage}
-                  class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {#if isChangingPage}
-                    <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full mr-2"></div>
-                  {/if}
-                  Anterior
-                </button>
-                <button 
-                  on:click={() => goToPage(currentPage + 1)} 
-                  disabled={currentPage === totalPages || isChangingPage}
-                  class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {#if isChangingPage}
-                    <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full mr-2"></div>
-                  {/if}
-                  Siguiente
-                </button>
-              </div>
-            </div>
-            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div class="flex items-center space-x-4">
-                <div>
-                  <p class="text-sm text-gray-700">
-                    Mostrando <span class="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a <span class="font-medium">{Math.min(currentPage * itemsPerPage, filteredAvaluos.length)}</span> de <span class="font-medium">{total}</span> resultados
-                  </p>
-                </div>
-                <div class="flex items-center space-x-2">
-                  <label for="itemsPerPage" class="text-sm text-gray-700">Registros:</label>
-                  <select
-                    id="itemsPerPage"
-                    bind:value={itemsPerPage}
-                    on:change={() => loadAvaluos(1, searchQuery)}
-                    class="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <!-- Previous page button -->
-                  <button
-                    on:click={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1 || isChangingPage}
-                    class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span class="sr-only">Anterior</span>
-                    {#if isChangingPage}
-                      <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full"></div>
-                    {:else}
-                      <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                      </svg>
-                    {/if}
-                  </button>
-                  
-                  <!-- Page numbers -->
-                  {#each createPageArray(totalPages) as pageNum}
-                    {#if pageNum === currentPage || pageNum === 1 || pageNum === totalPages || (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)}
-                      <button
-                        on:click={() => goToPage(pageNum)}
-                        disabled={isChangingPage}
-                        class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium {currentPage === pageNum ? 'text-blue-600 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'} disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {pageNum}
-                      </button>
-                    {:else if pageNum === currentPage - 2 || pageNum === currentPage + 2}
-                      <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                        ...
-                      </span>
-                    {/if}
-                  {/each}
-                  
-                  <!-- Next page button -->
-                  <button
-                    on:click={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages || isChangingPage}
-                    class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <span class="sr-only">Siguiente</span>
-                    {#if isChangingPage}
-                      <div class="animate-spin h-4 w-4 border-b-2 border-gray-600 rounded-full"></div>
-                    {:else}
-                      <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                      </svg>
-                    {/if}
-                  </button>
-                </nav>
-              </div>
-            </div>
-          </div>
+    <div class="flex flex-wrap gap-2">
+      <Button variant="outline" onclick={refreshAll} disabled={s.loading}>
+        {#if s.loading}
+          <Spinner size={14} />
+        {:else}
+          <RefreshCw size={14} />
         {/if}
+        Actualizar
+      </Button>
+      <Button href="/avaluos/nuevo">
+        <Plus size={16} /> Nuevo avalúo
+      </Button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <Card class="p-4">
+    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+      <div class="relative w-full md:max-w-sm">
+        <Search size={16} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          bind:value={searchInput}
+          oninput={onSearchInput}
+          placeholder="Buscar por placa, propietario, VIN, marca…"
+          class="pl-9 pr-9"
+        />
+        {#if searchInput}
+          <button
+            type="button"
+            class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-accent"
+            onclick={() => {
+              searchInput = '';
+              store.setSearch('');
+            }}
+            aria-label="Limpiar"
+          >
+            <X size={14} />
+          </button>
+        {/if}
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <Button variant="outline" size="sm" onclick={() => (showFilters = !showFilters)}>
+          <Filter size={14} />
+          Filtros
+          {#if activeFiltersCount}
+            <Badge class="ml-1 h-5 px-1.5 text-[10px]">{activeFiltersCount}</Badge>
+          {/if}
+        </Button>
+        <Button variant="outline" size="sm" onclick={() => exportCSV('page')}>
+          <Download size={14} /> Exportar CSV
+        </Button>
+      </div>
+    </div>
+
+    {#if showFilters}
+      <div class="mt-4 grid grid-cols-1 gap-3 border-t pt-4 md:grid-cols-4">
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-brand">Marca</label>
+          <Input id="f-brand" bind:value={filterBrand} placeholder="Toyota…" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-color">Color</label>
+          <Input id="f-color" bind:value={filterColor} placeholder="Negro…" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-from">Desde</label>
+          <Input id="f-from" bind:value={filterFrom} type="date" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-to">Hasta</label>
+          <Input id="f-to" bind:value={filterTo} type="date" />
+        </div>
+        <div class="md:col-span-4 flex justify-end gap-2">
+          <Button variant="ghost" size="sm" onclick={clearFilters}>Limpiar</Button>
+          <Button size="sm" onclick={applyFilters}>Aplicar filtros</Button>
+        </div>
+      </div>
+    {/if}
+  </Card>
+
+  <!-- Bulk action bar -->
+  {#if selected.size > 0}
+    <div class="flex items-center justify-between rounded-lg border bg-accent/40 px-4 py-2">
+      <span class="text-sm font-medium">
+        {selected.size} seleccionado{selected.size === 1 ? '' : 's'}
+      </span>
+      <div class="flex gap-2">
+        <Button variant="outline" size="sm" onclick={() => exportCSV('selection')}>
+          <Download size={14} /> Exportar selección
+        </Button>
+        <Button variant="destructive" size="sm" onclick={bulkDelete}>
+          <Trash2 size={14} /> Eliminar
+        </Button>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Table -->
+  <Card class="overflow-hidden">
+    <div class="relative w-full overflow-x-auto">
+      <table class="w-full caption-bottom text-sm">
+        <thead class="bg-muted/40">
+          <tr class="border-b">
+            <th class="w-10 px-3 py-2.5">
+              <Checkbox
+                checked={allSelected}
+                indeterminate={someSelected}
+                onclick={toggleAll}
+              />
+            </th>
+            {#each columns as col}
+              <th
+                class={cn(
+                  'px-3 py-2.5 font-medium text-muted-foreground',
+                  col.align === 'right' && 'text-right'
+                )}
+              >
+                {#if col.sortable}
+                  <button
+                    type="button"
+                    onclick={() => toggleSort(col.key)}
+                    class="inline-flex items-center gap-1 hover:text-foreground"
+                  >
+                    {col.label}
+                    {#if s.sort.column === col.key}
+                      {#if s.sort.direction === 'asc'}
+                        <ArrowUp size={12} />
+                      {:else}
+                        <ArrowDown size={12} />
+                      {/if}
+                    {:else}
+                      <ArrowUpDown size={12} class="opacity-40" />
+                    {/if}
+                  </button>
+                {:else}
+                  {col.label}
+                {/if}
+              </th>
+            {/each}
+            <th class="w-10 px-3 py-2.5"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {#if s.loading && s.items.length === 0}
+            {#each Array(6) as _, i}
+              <tr class="border-b">
+                <td class="px-3 py-3"><div class="h-4 w-4 rounded bg-muted animate-pulse"></div></td>
+                {#each columns as _c}
+                  <td class="px-3 py-3">
+                    <div class="h-3 w-3/4 rounded bg-muted animate-pulse"></div>
+                  </td>
+                {/each}
+                <td></td>
+              </tr>
+            {/each}
+          {:else if s.items.length === 0}
+            <tr>
+              <td colspan={columns.length + 2} class="px-3 py-16 text-center">
+                <div class="mx-auto flex max-w-sm flex-col items-center gap-2 text-muted-foreground">
+                  <Filter size={32} class="opacity-30" />
+                  <p class="font-medium text-foreground">Sin avalúos</p>
+                  <p class="text-sm">
+                    {#if s.search || activeFiltersCount}
+                      No hay resultados con los criterios actuales.
+                    {:else}
+                      Aún no se han creado avalúos.
+                    {/if}
+                  </p>
+                  {#if s.search || activeFiltersCount}
+                    <Button size="sm" variant="outline" onclick={clearFilters}>Limpiar filtros</Button>
+                  {/if}
+                </div>
+              </td>
+            </tr>
+          {:else}
+            {#each s.items as item (item.vehicle_appraisal_id)}
+              {@const id = item.vehicle_appraisal_id}
+              {@const isSelected = selected.has(id)}
+              <tr class={cn('border-b transition-colors hover:bg-muted/30', isSelected && 'bg-accent/30')}>
+                <td class="px-3 py-3">
+                  <Checkbox checked={isSelected} onclick={() => toggleOne(id)} />
+                </td>
+                <td class="px-3 py-3 font-medium tabular-nums">{id}</td>
+                <td class="px-3 py-3 text-muted-foreground tabular-nums">{item.cert ?? '—'}</td>
+                <td class="px-3 py-3 text-muted-foreground">{formatDate(item.appraisal_date)}</td>
+                <td class="px-3 py-3">
+                  <div class="font-medium">{item.applicant ?? '—'}</div>
+                  {#if item.owner && item.owner !== item.applicant}
+                    <div class="text-xs text-muted-foreground">{item.owner}</div>
+                  {/if}
+                </td>
+                <td class="px-3 py-3">
+                  <div class="font-medium">{item.brand ?? '—'}</div>
+                  {#if item.vehicle_description}
+                    <div class="text-xs text-muted-foreground">{item.vehicle_description} {item.model_year ?? ''}</div>
+                  {/if}
+                </td>
+                <td class="px-3 py-3">
+                  {#if item.plate_number}
+                    <Badge variant="outline">{item.plate_number}</Badge>
+                  {:else}
+                    —
+                  {/if}
+                </td>
+                <td class="px-3 py-3 text-right tabular-nums font-medium">
+                  {item.appraisal_value_trochez ? formatCRC(item.appraisal_value_trochez) : '—'}
+                </td>
+                <td class="px-3 py-3 text-right">
+                  <DropdownMenu>
+                    {#snippet trigger()}
+                      <button
+                        type="button"
+                        class="rounded-md p-1.5 hover:bg-accent"
+                        aria-label="Acciones"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+                    {/snippet}
+                    <DropdownItem href={`/avaluos/${id}/editar`}>
+                      <Pencil size={14} /> Editar
+                    </DropdownItem>
+                    <DropdownItem onclick={() => handlePrint(id)}>
+                      {#if busyAction?.type === 'cert' && busyAction.id === id}
+                        <Spinner size={14} />
+                      {:else}
+                        <Printer size={14} />
+                      {/if}
+                      Imprimir certificado
+                    </DropdownItem>
+                    <DropdownItem onclick={() => duplicateOne(id)}>
+                      <Copy size={14} /> Duplicar
+                    </DropdownItem>
+                    <DropdownItem destructive onclick={() => deleteOne(id)}>
+                      <Trash2 size={14} /> Eliminar
+                    </DropdownItem>
+                  </DropdownMenu>
+                </td>
+              </tr>
+            {/each}
+          {/if}
+        </tbody>
+      </table>
+    </div>
+  </Card>
+
+  <!-- Pagination -->
+  <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div class="text-sm text-muted-foreground">
+      {#if s.total === 0}
+        0 registros
+      {:else}
+        Mostrando <span class="font-medium text-foreground">{pageStart}-{pageEnd}</span>
+        de <span class="font-medium text-foreground">{s.total}</span>
       {/if}
     </div>
-  </main>
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="text-sm text-muted-foreground">Filas por página</span>
+      <Select
+        value={String(s.limit)}
+        onchange={(e) => store.setLimit(Number(e.currentTarget.value))}
+        options={[10, 25, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
+        placeholder={null}
+        class="h-8 w-20 text-sm"
+      />
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={s.page === 1 || s.loading}
+        onclick={() => store.setPage(1)}
+        aria-label="Primera página"
+      >
+        <ChevronsLeft size={14} />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={s.page === 1 || s.loading}
+        onclick={() => store.setPage(s.page - 1)}
+        aria-label="Anterior"
+      >
+        <ChevronLeft size={14} />
+      </Button>
+      <span class="text-sm tabular-nums">Página {s.page} de {totalPages}</span>
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={s.page >= totalPages || s.loading}
+        onclick={() => store.setPage(s.page + 1)}
+        aria-label="Siguiente"
+      >
+        <ChevronRight size={14} />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        disabled={s.page >= totalPages || s.loading}
+        onclick={() => store.setPage(totalPages)}
+        aria-label="Última página"
+      >
+        <ChevronsRight size={14} />
+      </Button>
+    </div>
+  </div>
 </div>
-
-
-
-<style>
-  /* Estilos personalizados para el scrollbar */
-  .overflow-x-auto::-webkit-scrollbar {
-    height: 8px;
-  }
-  
-  .overflow-x-auto::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 4px;
-  }
-  
-  .overflow-x-auto::-webkit-scrollbar-thumb {
-    background: #d1d5db;
-    border-radius: 4px;
-  }
-  
-  .overflow-x-auto::-webkit-scrollbar-thumb:hover {
-    background: #9ca3af;
-  }
-</style>

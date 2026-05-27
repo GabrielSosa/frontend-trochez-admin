@@ -20,7 +20,9 @@ export class ApiUrls {
     create: API_BASE_URL + '/api-appraisals',
     update: (id) => API_BASE_URL + '/api-appraisals/' + id,
     delete: (id) => API_BASE_URL + '/api-appraisals/' + id,
-    search: API_BASE_URL + '/api-appraisals/search'
+    bulkDelete: API_BASE_URL + '/api-appraisals/bulk-delete',
+    search: API_BASE_URL + '/api-appraisals/search',
+    duplicate: (id) => API_BASE_URL + '/api-appraisals/' + id + '/duplicate'
   };
 
   static CERTIFICADOS = {
@@ -39,9 +41,52 @@ export class ApiUrls {
   }
 }
 
+function getToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('jwtToken');
+}
+
+/**
+ * Low-level fetch wrapper that injects the JWT and a JSON content type.
+ * Returns the raw Response — caller decides how to read it.
+ */
 export const apiFetch = async (url, options = {}) => {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  const token = localStorage.getItem('jwtToken');
+  const token = getToken();
   if (token) headers['Authorization'] = 'Bearer ' + token;
   return await fetch(url, { ...options, headers });
 };
+
+/**
+ * JSON fetch helper: parses the response, throws an Error with `.status` and `.data` on non-2xx.
+ * Handles 401 by clearing the session and redirecting to /login.
+ */
+export async function apiJson(url, options = {}) {
+  const res = await apiFetch(url, options);
+  let data = null;
+  const ct = res.headers.get('content-type') ?? '';
+  try {
+    data = ct.includes('application/json') ? await res.json() : await res.text();
+  } catch {
+    data = null;
+  }
+
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('jwtToken');
+      localStorage.removeItem('userData');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+  }
+
+  if (!res.ok) {
+    const message = (data && (data.detail || data.message)) || `Error ${res.status}`;
+    const err = new Error(message);
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}

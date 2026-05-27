@@ -1,111 +1,108 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { ApiUrls, apiFetch } from '$lib/api';
+  import { ApiUrls } from '$lib/api.js';
+  import { auth } from '$lib/stores/auth.svelte.js';
+  import { showError, showSuccess } from '$lib/utils/toast.js';
+  import { Loader2, LogIn } from 'lucide-svelte';
+  import Button from '$lib/components/ui/Button.svelte';
+  import Input from '$lib/components/ui/Input.svelte';
+  import Label from '$lib/components/ui/Label.svelte';
+  import Card from '$lib/components/ui/Card.svelte';
+  import CardContent from '$lib/components/ui/CardContent.svelte';
 
-  let email = '';
-  let password = '';
-  let error = '';
-  let loading = false;
+  let email = $state('');
+  let password = $state('');
+  let loading = $state(false);
+  let error = $state('');
 
   onMount(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('jwtToken');
-    if (token) {
-      goto('/');
-    }
+    if (auth.isAuthenticated) goto('/');
   });
 
-  async function handleLogin() {
+  async function handleLogin(e) {
+    e.preventDefault();
     error = '';
     loading = true;
-    
     try {
-      // Use direct fetch for login to see the raw response
       const response = await fetch(ApiUrls.AUTH.login, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-      
       const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.message || 'Error al iniciar sesión');
+        throw new Error(data.message || data.detail || 'Error al iniciar sesión');
       }
-      
-      // Store token and user data - check all possible token field names
-      const token = data.token || data.accessToken || data.access_token || data.jwt || data.id_token;
-      
-      if (!token) {
-        throw new Error('No se pudo obtener el token de autenticación');
-      }
-      
-      // Store the token in localStorage
-      localStorage.setItem('jwtToken', token);
-      
-      // Store user data if available
-      if (data.user || data.userData) {
-        localStorage.setItem('userData', JSON.stringify(data.user || data.userData));
-      }
-      
-      // Redirect to dashboard
+      const token = data.token || data.accessToken || data.access_token || data.jwt;
+      if (!token) throw new Error('No se pudo obtener el token de autenticación');
+      auth.setSession(token, data.user || data.userData || { email });
+      showSuccess('Bienvenido');
       goto('/');
     } catch (err) {
-      error = err.message || 'Error al iniciar sesión. Intente nuevamente.';
+      error = err.message || 'Error al iniciar sesión';
+      showError(error);
     } finally {
       loading = false;
     }
   }
 </script>
 
-<div class="min-h-screen flex items-center justify-center bg-gray-100">
-  <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-    <div class="text-center mb-8">
-      <h1 class="text-2xl font-bold text-gray-800">Avalúos Trochez</h1>
-      <p class="text-gray-600">Panel de Administración</p>
+<div class="grid min-h-screen lg:grid-cols-2">
+  <!-- Left: hero panel -->
+  <div class="hidden lg:flex flex-col justify-between bg-gradient-to-br from-primary to-blue-700 p-10 text-primary-foreground">
+    <div class="flex items-center gap-3">
+      <div class="flex h-10 w-10 items-center justify-center rounded-md bg-white/10 backdrop-blur font-bold">T</div>
+      <span class="text-lg font-semibold tracking-tight">Avalúos Trochez</span>
     </div>
-    
-    <form on:submit|preventDefault={handleLogin} class="space-y-6">
-      {#if error}
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-          <span class="block sm:inline">{error}</span>
+    <div class="max-w-md space-y-3">
+      <h2 class="text-4xl font-semibold leading-tight">Panel de administración</h2>
+      <p class="text-white/80">
+        Gestioná avalúos vehiculares, deducciones y certificados desde un solo lugar.
+      </p>
+    </div>
+    <p class="text-xs text-white/60">© {new Date().getFullYear()} Avalúos Trochez</p>
+  </div>
+
+  <!-- Right: login card -->
+  <div class="flex items-center justify-center bg-background p-6">
+    <Card class="w-full max-w-md">
+      <CardContent class="p-8">
+        <div class="mb-6 lg:hidden">
+          <div class="mb-4 flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold">T</div>
+            <span class="text-lg font-semibold tracking-tight">Avalúos Trochez</span>
+          </div>
         </div>
-      {/if}
-      
-      <div>
-        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-        <input
-          id="email"
-          type="email"
-          bind:value={email}
-          required
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="correo@ejemplo.com"
-        />
-      </div>
-      
-      <div>
-        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-        <input
-          id="password"
-          type="password"
-          bind:value={password}
-          required
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="••••••••"
-        />
-      </div>
-      
-      <button
-        type="submit"
-        disabled={loading}
-        class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-      </button>
-    </form>
+        <h1 class="text-2xl font-semibold tracking-tight">Iniciar sesión</h1>
+        <p class="mt-1 text-sm text-muted-foreground">Ingresá tus credenciales para continuar</p>
+
+        <form onsubmit={handleLogin} class="mt-6 space-y-4">
+          {#if error}
+            <div class="rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              {error}
+            </div>
+          {/if}
+
+          <div class="space-y-2">
+            <Label for="email">Correo electrónico</Label>
+            <Input id="email" type="email" bind:value={email} placeholder="usuario@trochez.com" required autocomplete="email" />
+          </div>
+
+          <div class="space-y-2">
+            <Label for="password">Contraseña</Label>
+            <Input id="password" type="password" bind:value={password} placeholder="••••••••" required autocomplete="current-password" />
+          </div>
+
+          <Button type="submit" class="w-full" disabled={loading}>
+            {#if loading}
+              <Loader2 size={16} class="animate-spin" /> Iniciando…
+            {:else}
+              <LogIn size={16} /> Iniciar sesión
+            {/if}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   </div>
 </div>
