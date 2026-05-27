@@ -41,7 +41,8 @@
     // Fetch the existing avalúo data
     try {
       isLoading = true;
-      const data = await apiFetch(ApiUrls.AVALUOS.getById(avaluoId));
+      const httpResp = await apiFetch(ApiUrls.AVALUOS.getById(avaluoId));
+      const data = await httpResp.json();
       
       // Map API data to form data - This overwrites the defaults
       formData = {
@@ -167,120 +168,79 @@
     }
   }
 
-  // Función para imprimir certificado - Mejorada para evitar bloqueadores de ventanas emergentes
+  // Función para imprimir certificado
   async function printCertificate(avaluoId) {
     try {
-              const token = localStorage.getItem('jwtToken');
-        if (!token) {
-          showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
-          setTimeout(() => goto('/login'), 1000);
-          return;
-        }
-      
-      // Set generating flag
+      const token = localStorage.getItem('jwtToken');
+      if (!token) {
+        showError('No se encontró token de autenticación. Por favor inicie sesión nuevamente.');
+        setTimeout(() => goto('/login'), 1000);
+        return;
+      }
+
       generatingCertificate = true;
       generatingCertificateId = avaluoId;
-      
-      // Make a fetch request with the JWT token in the Authorization header
+
       const response = await fetch(ApiUrls.CERTIFICADOS.get(avaluoId), {
         method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
-      
+
       if (!response.ok) {
-        throw new Error(`Error al obtener el certificado: ${response.status} ${response.statusText}`);
+        let errMsg = `Error ${response.status}`;
+        try { const j = await response.json(); errMsg = j.detail || j.message || errMsg; } catch(e) {}
+        throw new Error(errMsg);
       }
-      
-      // Check content type to handle different response types
-      const contentType = response.headers.get('content-type');
-      
-      if (contentType && contentType.includes('application/pdf')) {
-        // Handle PDF response
+
+      const contentType = response.headers.get('content-type') ?? '';
+
+      if (contentType.includes('application/pdf')) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
-        
-        // Try multiple methods to open the PDF
-        try {
-          // Method 1: Try window.open first
-          const newWindow = window.open(url, '_blank');
-          
-          // Check if popup was blocked
-          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            // Method 2: Create a temporary link and click it
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.download = `certificado_${avaluoId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            // Show user message
-            setTimeout(() => {
-              showInfo('El certificado se está descargando. Si no se abrió automáticamente, revisa tu carpeta de descargas.');
-            }, 100);
-          }
-        } catch (popupError) {
-          // Method 3: Fallback to download
+        const newWin = window.open(url, '_blank');
+        if (!newWin) {
           const link = document.createElement('a');
           link.href = url;
           link.download = `certificado_${avaluoId}.pdf`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          
           showInfo('El certificado se está descargando. Revisa tu carpeta de descargas.');
         }
-      } else if (contentType && contentType.includes('application/json')) {
-        // Handle JSON response (might contain a URL or error)
-        const data = await response.json();
-        if (data.url) {
-          try {
-            const newWindow = window.open(data.url, '_blank');
-            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-              // Fallback: open in same window
-              window.location.href = data.url;
-            }
-          } catch (popupError) {
-            window.location.href = data.url;
-          }
-        } else {
-          throw new Error(data.message || 'Error al generar el certificado');
-        }
       } else {
-        // Handle other response types
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        
-        try {
-          const newWindow = window.open(url, '_blank');
-          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.download = `certificado_${avaluoId}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-          }
-        } catch (popupError) {
+        // HTML certificate — render in new window regardless of Content-Type
+        const htmlText = await response.text();
+        if (htmlText.trimStart().startsWith('{')) {
+          try {
+            const j = JSON.parse(htmlText);
+            throw new Error(j.detail || j.message || 'Error al generar el certificado');
+          } catch(e) { if (!(e instanceof SyntaxError)) throw e; }
+        }
+        const newWin = window.open('', '_blank');
+        if (newWin) {
+          newWin.document.open();
+          newWin.document.write(htmlText);
+          newWin.document.close();
+          newWin.onload = () => newWin.print();
+          setTimeout(() => { try { newWin.print(); } catch(e2) {} }, 800);
+        } else {
+          const blob = new Blob([htmlText], { type: 'text/html; charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = url;
-          link.download = `certificado_${avaluoId}.pdf`;
+          link.download = `certificado_${avaluoId}.html`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
+          showInfo('El certificado se descargó. Ábrelo en el navegador y usa Imprimir → Guardar como PDF.');
         }
       }
-          } catch (error) {
-        showError(`Error al obtener el certificado: ${error.message}`);
-      } finally {
-        // Ensure generating flag is reset
-        generatingCertificate = false;
-        generatingCertificateId = null;
-      }
+    } catch (error) {
+      showError(`Error al obtener el certificado: ${error.message}`);
+    } finally {
+      generatingCertificate = false;
+      generatingCertificateId = null;
+    }
   }
 </script>
 
