@@ -49,6 +49,17 @@ export function cleanAvaluoFormData(formData) {
   cleanedData.discounts = Number(cleanedData.discounts) || 0;
   cleanedData.bank_value_in_dollars = Number(cleanedData.bank_value_in_dollars) || 0;
 
+  // cert and referencia_original are numeric columns in Supabase — coerce
+  // empty strings / NaN to null so the insert/update doesn't 400 with
+  // "invalid input syntax for type numeric: \"\"".
+  const toNullableNumber = (v) => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  cleanedData.cert = toNullableNumber(cleanedData.cert);
+  cleanedData.referencia_original = toNullableNumber(cleanedData.referencia_original);
+
   if (cleanedData.deductions && Array.isArray(cleanedData.deductions)) {
     cleanedData.deductions = cleanedData.deductions
       .map(d => ({
