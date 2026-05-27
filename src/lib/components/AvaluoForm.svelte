@@ -5,14 +5,10 @@
   import CardContent from '$lib/components/ui/CardContent.svelte';
   import Button from '$lib/components/ui/Button.svelte';
   import Input from '$lib/components/ui/Input.svelte';
-  import SpellInput from '$lib/components/ui/SpellInput.svelte';
-  import SpellTextarea from '$lib/components/ui/SpellTextarea.svelte';
   import Label from '$lib/components/ui/Label.svelte';
   import Textarea from '$lib/components/ui/Textarea.svelte';
   import Dialog from '$lib/components/ui/Dialog.svelte';
   import Spinner from '$lib/components/ui/Spinner.svelte';
-  import { spell } from '$lib/stores/spell.svelte.js';
-  import { onMount } from 'svelte';
   import { Trash2, Plus, Pencil, Save, X, Calculator } from 'lucide-svelte';
   import { formatCRC } from '$lib/utils.js';
 
@@ -76,12 +72,6 @@
   }
 
   let requiredVehicleDescription = $derived(!isEdit);
-
-  // Kick off the dictionary load as soon as the form mounts so suggestions
-  // are ready by the time the user starts typing.
-  onMount(() => {
-    spell.init();
-  });
 </script>
 
 <form onsubmit={handleSubmit} class="space-y-6">
@@ -131,7 +121,7 @@
     <CardContent class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <div class="space-y-1.5">
         <Label for="applicant">Solicitante <span class="text-destructive">*</span></Label>
-        <SpellInput
+        <Input
           id="applicant"
           bind:value={formData.applicant}
           error={!!validationErrors?.applicant}
@@ -144,7 +134,7 @@
       </div>
       <div class="space-y-1.5">
         <Label for="owner">Propietario</Label>
-        <SpellInput id="owner" bind:value={formData.owner} placeholder="Propietario" />
+        <Input id="owner" bind:value={formData.owner} placeholder="Propietario" />
       </div>
     </CardContent>
   </Card>
@@ -157,7 +147,7 @@
     <CardContent class="grid grid-cols-1 gap-4 md:grid-cols-6">
       <div class="space-y-1.5 md:col-span-2">
         <Label for="brand">Marca <span class="text-destructive">*</span></Label>
-        <SpellInput
+        <Input
           id="brand"
           bind:value={formData.brand}
           error={!!validationErrors?.brand}
@@ -172,7 +162,7 @@
         <Label for="vehicle_description">
           Descripción / modelo {requiredVehicleDescription ? '*' : ''}
         </Label>
-        <SpellInput
+        <Input
           id="vehicle_description"
           bind:value={formData.vehicle_description}
           error={!!validationErrors?.vehicle_description}
@@ -195,7 +185,7 @@
       </div>
       <div class="space-y-1.5">
         <Label for="color">Color</Label>
-        <SpellInput id="color" bind:value={formData.color} placeholder="Negro" />
+        <Input id="color" bind:value={formData.color} placeholder="Negro" />
       </div>
       <div class="space-y-1.5">
         <Label for="plate_number">Placa</Label>
@@ -215,7 +205,7 @@
       </div>
       <div class="space-y-1.5">
         <Label for="fuel_type">Combustible</Label>
-        <SpellInput id="fuel_type" bind:value={formData.fuel_type} placeholder="Diesel" />
+        <Input id="fuel_type" bind:value={formData.fuel_type} placeholder="Diesel" />
       </div>
       <div class="space-y-1.5">
         <Label for="engine_size">Cilindraje</Label>
@@ -230,11 +220,11 @@
       </div>
       <div class="space-y-1.5 md:col-span-6">
         <Label for="extras">Extras</Label>
-        <SpellInput id="extras" bind:value={formData.extras} placeholder="Equipamiento adicional" />
+        <Input id="extras" bind:value={formData.extras} placeholder="Equipamiento adicional" />
       </div>
       <div class="space-y-1.5 md:col-span-6">
         <Label for="notes">Observaciones</Label>
-        <SpellTextarea id="notes" bind:value={formData.notes} placeholder="Notas sobre el vehículo…" rows="3" />
+        <Textarea id="notes" bind:value={formData.notes} placeholder="Notas sobre el vehículo…" rows="3" />
       </div>
     </CardContent>
   </Card>
@@ -339,7 +329,7 @@
           {#each formData.deductions as deduction, index (index)}
             <div class="flex items-center gap-2">
               <div class="grid flex-1 grid-cols-1 gap-2 md:grid-cols-[1fr_180px]">
-                <SpellInput
+                <Input
                   bind:value={deduction.description}
                   placeholder="Descripción de la deducción #{index + 1}"
                 />

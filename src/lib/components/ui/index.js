@@ -16,5 +16,3 @@ export { default as Select } from './Select.svelte';
 export { default as Dialog } from './Dialog.svelte';
 export { default as DropdownMenu } from './DropdownMenu.svelte';
 export { default as DropdownItem } from './DropdownItem.svelte';
-export { default as SpellInput } from './SpellInput.svelte';
-export { default as SpellTextarea } from './SpellTextarea.svelte';
