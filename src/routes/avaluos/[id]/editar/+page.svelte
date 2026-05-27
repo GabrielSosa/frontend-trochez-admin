@@ -8,7 +8,7 @@
   import { showSuccess, showError, showInfo } from '$lib/utils/toast.js';
   import { confirmCancel } from '$lib/utils/confirm.js';
   // Import the new function along with the others
-  import { validateAvaluoFormData, cleanAvaluoFormData, getDefaultAvaluoFormData } from '$lib/utils/avaluoUtils.js';
+  import { validateAvaluoFormData, cleanAvaluoFormData, getDefaultAvaluoFormData, mapApiDataToFormData } from '$lib/utils/avaluoUtils.js';
 
   // Get the ID from the URL
   let avaluoId = $page.params.id;
