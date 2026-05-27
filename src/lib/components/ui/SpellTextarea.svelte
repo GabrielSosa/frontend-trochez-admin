@@ -14,13 +14,35 @@
   } = $props();
 
   let textareaEl;
+  let overlayEl;
   let wordStart = 0;
   let wordEnd = 0;
-  let dismissedFor = '';
+  let dismissedFor = $state(new Set());
   let suggestion = $state(null);
   let bad = $state('');
+  let spellTick = $state(0);
 
-  const recompute = debounce(async () => {
+  let tokens = $derived.by(() => {
+    spellTick;
+    const out = [];
+    const re = /[\p{L}\p{N}'’]+|[^\p{L}\p{N}'’]+/gu;
+    let m;
+    while ((m = re.exec(value)) !== null) {
+      const t = m[0];
+      const isWord = /^[\p{L}\p{N}'’]+/u.test(t);
+      out.push({
+        text: t,
+        bad: isWord && spell.ready ? !spell.isKnown(t) : false
+      });
+    }
+    return out;
+  });
+
+  function refreshOverlay() {
+    spellTick++;
+  }
+
+  const checkCaret = debounce(async () => {
     if (!textareaEl) return;
     if (document.activeElement !== textareaEl) {
       suggestion = null;
@@ -34,19 +56,16 @@
     wordStart = startMatch ? caret - startMatch[0].length : caret;
     wordEnd = endMatch ? caret + endMatch[0].length : caret;
     const word = value.slice(wordStart, wordEnd);
-    if (!word || word.length < minLength || dismissedFor === word.toLowerCase()) {
+    if (!word || word.length < minLength || dismissedFor.has(word.toLowerCase())) {
       suggestion = null;
-      bad = '';
       return;
     }
-    if (!spell.ready) await spell.init();
     if (!spell.ready) {
-      suggestion = null;
-      return;
+      await spell.init();
+      refreshOverlay();
     }
-    if (spell.isKnown(word)) {
+    if (!spell.ready || spell.isKnown(word)) {
       suggestion = null;
-      bad = '';
       return;
     }
     const list = spell.suggest(word, 1);
@@ -56,12 +75,7 @@
     }
     suggestion = list[0];
     bad = word;
-  }, 250);
-
-  function onInput() {
-    dismissedFor = '';
-    recompute();
-  }
+  }, 180);
 
   function applySuggestion() {
     if (!suggestion) return;
@@ -85,24 +99,50 @@
   }
 
   function dismiss() {
-    if (bad) dismissedFor = bad.toLowerCase();
+    if (bad) {
+      const next = new Set(dismissedFor);
+      next.add(bad.toLowerCase());
+      dismissedFor = next;
+    }
     suggestion = null;
     bad = '';
   }
 
+  function onInput() {
+    dismissedFor = new Set();
+    checkCaret();
+  }
+
   function onKeydown(e) {
-    if (!suggestion) return;
-    if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && e.altKey)) {
-      e.preventDefault();
-      applySuggestion();
-    } else if (e.key === 'Escape') {
-      dismiss();
+    if (suggestion) {
+      if ((e.key === 'Tab' && !e.shiftKey) || (e.key === 'Enter' && e.altKey)) {
+        e.preventDefault();
+        applySuggestion();
+        return;
+      }
+      if (e.key === 'Escape') {
+        dismiss();
+        return;
+      }
+    }
+  }
+
+  function syncScroll() {
+    if (textareaEl && overlayEl) {
+      overlayEl.scrollLeft = textareaEl.scrollLeft;
+      overlayEl.scrollTop = textareaEl.scrollTop;
+    }
+  }
+
+  function ensureSpellReady() {
+    if (!spell.ready && !spell.loading) {
+      spell.init().then(refreshOverlay);
     }
   }
 
   let classes = $derived(
     cn(
-      'flex min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50',
+      'spell-input flex min-h-[80px] w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50',
       error ? 'border-destructive' : 'border-input',
       className
     )
@@ -110,17 +150,32 @@
 </script>
 
 <div class="relative">
+  <div bind:this={overlayEl} class={cn(classes, 'spell-overlay')} aria-hidden="true">
+    {#each tokens as tk, i (i)}
+      {#if tk.bad}<span class="spell-bad">{tk.text}</span>{:else}<span>{tk.text}</span>{/if}
+    {/each}
+  </div>
   <textarea
     bind:this={textareaEl}
     bind:value
-    spellcheck="true"
+    spellcheck="false"
     lang="es"
     autocapitalize="sentences"
     autocomplete="on"
     oninput={onInput}
     onkeydown={onKeydown}
-    onblur={() => setTimeout(() => (suggestion = null), 120)}
-    class={classes}
+    onkeyup={() => checkCaret()}
+    onclick={() => {
+      ensureSpellReady();
+      checkCaret();
+    }}
+    onfocus={() => {
+      ensureSpellReady();
+      checkCaret();
+    }}
+    onscroll={syncScroll}
+    onblur={() => setTimeout(() => (suggestion = null), 140)}
+    class={cn(classes, 'spell-input-field')}
     {...rest}
   ></textarea>
 
@@ -159,3 +214,29 @@
     </div>
   {/if}
 </div>
+
+<style>
+  .spell-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    color: transparent;
+    background: transparent;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .spell-input-field {
+    position: relative;
+    background: transparent !important;
+    resize: vertical;
+  }
+  :global(.spell-bad) {
+    text-decoration: underline wavy hsl(0 72% 51% / 0.95);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+    color: transparent;
+  }
+</style>
