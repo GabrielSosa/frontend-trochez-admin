@@ -93,7 +93,14 @@
       </div>
       <div class="space-y-1.5">
         <Label for="cert">No. de certificado</Label>
-        <Input id="cert" type="text" bind:value={formData.cert} placeholder="Ej. 12345" />
+        <Input
+          id="cert"
+          type="text"
+          bind:value={formData.cert}
+          placeholder="Ej. 12345"
+          spellcheck="false"
+          autocapitalize="off"
+        />
       </div>
       <div class="space-y-1.5">
         <Label for="validity_days">Validez (días)</Label>
@@ -185,7 +192,15 @@
       </div>
       <div class="space-y-1.5">
         <Label for="plate_number">Placa</Label>
-        <Input id="plate_number" type="text" bind:value={formData.plate_number} placeholder="ABC123" />
+        <Input
+          id="plate_number"
+          type="text"
+          bind:value={formData.plate_number}
+          placeholder="ABC123"
+          spellcheck="false"
+          autocapitalize="characters"
+          class="uppercase"
+        />
       </div>
       <div class="space-y-1.5">
         <Label for="mileage">Kilometraje</Label>
@@ -232,6 +247,10 @@
           maxlength="17"
           bind:value={formData.vin}
           error={!!validationErrors?.vin}
+          spellcheck="false"
+          autocapitalize="characters"
+          autocomplete="off"
+          class="uppercase tracking-wider"
         />
         {#if validationErrors?.vin}
           <p class="text-xs text-destructive">{validationErrors.vin}</p>
@@ -245,6 +264,10 @@
           maxlength="17"
           bind:value={formData.vin_card}
           error={!!validationErrors?.vin_card}
+          spellcheck="false"
+          autocapitalize="characters"
+          autocomplete="off"
+          class="uppercase tracking-wider"
         />
         {#if validationErrors?.vin_card}
           <p class="text-xs text-destructive">{validationErrors.vin_card}</p>
@@ -258,6 +281,10 @@
           maxlength="17"
           bind:value={formData.engine_number}
           error={!!validationErrors?.engine_number}
+          spellcheck="false"
+          autocapitalize="characters"
+          autocomplete="off"
+          class="uppercase tracking-wider"
         />
         {#if validationErrors?.engine_number}
           <p class="text-xs text-destructive">{validationErrors.engine_number}</p>
@@ -271,6 +298,10 @@
           maxlength="17"
           bind:value={formData.engine_number_card}
           error={!!validationErrors?.engine_number_card}
+          spellcheck="false"
+          autocapitalize="characters"
+          autocomplete="off"
+          class="uppercase tracking-wider"
         />
         {#if validationErrors?.engine_number_card}
           <p class="text-xs text-destructive">{validationErrors.engine_number_card}</p>
