@@ -259,14 +259,20 @@
         {s.total} {s.total === 1 ? 'registro' : 'registros'} en total
       </p>
     </div>
-    <div class="flex flex-wrap gap-2">
-      <Button variant="outline" onclick={refreshAll} disabled={s.loading}>
+    <div class="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="icon"
+        onclick={refreshAll}
+        disabled={s.loading}
+        title="Actualizar y limpiar filtros"
+        aria-label="Actualizar"
+      >
         {#if s.loading}
           <Spinner size={14} />
         {:else}
           <RefreshCw size={14} />
         {/if}
-        Actualizar
       </Button>
       <Button href="/avaluos/nuevo">
         <Plus size={16} /> Nuevo avalúo
@@ -486,7 +492,7 @@
                       {:else}
                         <Printer size={14} />
                       {/if}
-                      Imprimir certificado
+                      Certificado
                     </DropdownItem>
                     <DropdownItem onclick={() => duplicateOne(id)}>
                       <Copy size={14} /> Duplicar
