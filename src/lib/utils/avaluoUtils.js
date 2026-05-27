@@ -1,77 +1,38 @@
 /**
  * Validates the core fields of the avaluo form data.
- * @param {object} formData - The form data object.
- * @returns {object} An object containing validation errors. Keys are field names, values are error messages.
  */
 export function validateAvaluoFormData(formData, isEdit = false) {
   const errors = {};
 
-  // Required fields
-  if (!formData.applicant) {
-    errors.applicant = 'El solicitante es obligatorio.';
-  }
-  if (!formData.brand) {
-    errors.brand = 'La marca es obligatoria.';
-  }
-  if (!formData.vehicle_description && !isEdit) {
-    errors.vehicle_description = 'La descripción es obligatoria.';
-  }
+  if (!formData.applicant) errors.applicant = 'El solicitante es obligatorio.';
+  if (!formData.brand) errors.brand = 'La marca es obligatoria.';
+  if (!formData.vehicle_description && !isEdit) errors.vehicle_description = 'La descripción es obligatoria.';
   if (!formData.appraisal_value_trochez) {
     errors.appraisal_value_trochez = 'El valor local es obligatorio.';
   } else if (Number(formData.appraisal_value_trochez) <= 0) {
-    // Check > 0 only if the field has a value
     errors.appraisal_value_trochez = 'El valor local debe ser mayor que cero.';
   }
 
-  // Length checks
-  if (formData.vin && formData.vin.length > 17) {
-    errors.vin = 'El VIN no debe exceder 17 caracteres';
-  }
-  if (formData.engine_number && formData.engine_number.length > 17) {
-    errors.engine_number = 'El número de motor no debe exceder 17 caracteres';
-  }
-  
-  if (formData.vin_card && formData.vin_card.length > 17) {
-    errors.vin_card = 'El VIN (Tarjeta) no debe exceder 17 caracteres';
-  }
-  if (formData.engine_number_card && formData.engine_number_card.length > 17) {
-    errors.engine_number_card = 'El número de motor (Tarjeta) no debe exceder 17 caracteres';
-  }
-
-  // Validate numeric fields
-  if (formData.apprasail_value_lower_cost && Number(formData.apprasail_value_lower_cost) < 0) {
-    errors.apprasail_value_lower_cost = 'El valor de menor costo no puede ser negativo';
-  }
-  
-  if (formData.apprasail_value_lower_bank && Number(formData.apprasail_value_lower_bank) < 0) {
-    errors.apprasail_value_lower_bank = 'El valor de menor banco no puede ser negativo';
-  }
-
-  if (formData.extra_value && Number(formData.extra_value) < 0) {
-    errors.extra_value = 'El valor extra no puede ser negativo';
-  }
-
-  if (formData.discounts && Number(formData.discounts) < 0) {
-    errors.discounts = 'Los descuentos no pueden ser negativos';
-  }
-
-  if (formData.bank_value_in_dollars && Number(formData.bank_value_in_dollars) < 0) {
-    errors.bank_value_in_dollars = 'El valor del banco en dólares no puede ser negativo';
-  }
+  if (formData.vin && formData.vin.length > 17) errors.vin = 'El VIN no debe exceder 17 caracteres';
+  if (formData.engine_number && formData.engine_number.length > 17) errors.engine_number = 'El número de motor no debe exceder 17 caracteres';
+  if (formData.vin_card && formData.vin_card.length > 17) errors.vin_card = 'El VIN (Tarjeta) no debe exceder 17 caracteres';
+  if (formData.engine_number_card && formData.engine_number_card.length > 17) errors.engine_number_card = 'El número de motor (Tarjeta) no debe exceder 17 caracteres';
+  if (formData.apprasail_value_lower_cost && Number(formData.apprasail_value_lower_cost) < 0) errors.apprasail_value_lower_cost = 'El valor de menor costo no puede ser negativo';
+  if (formData.apprasail_value_lower_bank && Number(formData.apprasail_value_lower_bank) < 0) errors.apprasail_value_lower_bank = 'El valor de menor banco no puede ser negativo';
+  if (formData.extra_value && Number(formData.extra_value) < 0) errors.extra_value = 'El valor extra no puede ser negativo';
+  if (formData.discounts && Number(formData.discounts) < 0) errors.discounts = 'Los descuentos no pueden ser negativos';
+  if (formData.bank_value_in_dollars && Number(formData.bank_value_in_dollars) < 0) errors.bank_value_in_dollars = 'El valor del banco en dólares no puede ser negativo';
 
   return errors;
 }
 
 /**
  * Cleans and prepares the avaluo form data for API submission.
- * Converts fields to appropriate types (Number) and cleans the deductions array.
- * @param {object} formData - The raw form data object.
- * @returns {object} The cleaned form data object ready for the API.
+ * Maps form deduction shape {description, amount} → API shape {deduction_name, deduction_value}.
  */
 export function cleanAvaluoFormData(formData) {
   const cleanedData = { ...formData };
 
-  // Convert numeric fields
   cleanedData.model_year = Number(cleanedData.model_year) || null;
   cleanedData.mileage = Number(cleanedData.mileage) || 0;
   cleanedData.engine_size = Number(cleanedData.engine_size) || null;
@@ -84,36 +45,29 @@ export function cleanAvaluoFormData(formData) {
   cleanedData.validity_kms = Number(cleanedData.validity_kms) || 1000;
   cleanedData.modified_km = Number(cleanedData.modified_km) || 0;
   cleanedData.vehicle_appraisal_id = Number(cleanedData.vehicle_appraisal_id) || null;
-  
-  // Convert string numeric fields
   cleanedData.extra_value = Number(cleanedData.extra_value) || 0;
   cleanedData.discounts = Number(cleanedData.discounts) || 0;
   cleanedData.bank_value_in_dollars = Number(cleanedData.bank_value_in_dollars) || 0;
 
-  // Clean deductions array
+  // Map form deductions {description, amount} → API format {deduction_name, deduction_value}
   if (cleanedData.deductions && Array.isArray(cleanedData.deductions)) {
     cleanedData.deductions = cleanedData.deductions
       .map(d => ({
-        description: d.description || '',
-        amount: Number(d.amount) || 0
+        deduction_name: d.description || d.deduction_name || '',
+        deduction_value: Number(d.amount ?? d.deduction_value) || 0,
+        deduction_percentage: d.deduction_percentage || null
       }))
-      .filter(d => d.description || d.amount > 0);
+      .filter(d => d.deduction_name || d.deduction_value > 0);
   } else {
     cleanedData.deductions = [];
   }
-
-  // Remove fields potentially added by the form component but not needed directly by API
-  // (Example: if the form added temporary calculation fields)
-  // delete cleanedData.someTemporaryField; 
 
   return cleanedData;
 }
 
 /**
  * Maps API response data to form data structure.
- * Handles both new and existing avalúos.
- * @param {object} apiData - The data from the API response.
- * @returns {object} The mapped form data object.
+ * Maps API deduction shape {deduction_name, deduction_value} → form shape {description, amount}.
  */
 export function mapApiDataToFormData(apiData) {
   return {
@@ -149,23 +103,26 @@ export function mapApiDataToFormData(apiData) {
     bank_value_in_dollars: apiData.bank_value_in_dollars || 0,
     referencia_original: apiData.referencia_original || '',
     cert: apiData.cert || '',
-    deductions: apiData.deductions || []
+    // Map API deductions {deduction_name, deduction_value} → form {description, amount}
+    deductions: (apiData.deductions || []).map(d => ({
+      description: d.deduction_name || '',
+      amount: d.deduction_value ?? null
+    }))
   };
 }
 
 /**
  * Returns the default structure for avaluo form data.
- * @returns {object} The default form data object.
  */
 export function getDefaultAvaluoFormData() {
   return {
-    appraisal_date: '', // Default to empty, override in 'nuevo' if needed
+    appraisal_date: '',
     vehicle_description: '',
     brand: '',
     model_year: 0,
     color: '',
     mileage: 0,
-    fuel_type: 'GAS', // Default fuel type
+    fuel_type: 'GAS',
     engine_size: 0,
     plate_number: '',
     applicant: '',
@@ -176,7 +133,7 @@ export function getDefaultAvaluoFormData() {
     apprasail_value_lower_cost: 0,
     apprasail_value_lower_bank: 0,
     vin: '',
-    vin_card: '', 
+    vin_card: '',
     engine_number: '',
     engine_number_card: '',
     notes: '',
