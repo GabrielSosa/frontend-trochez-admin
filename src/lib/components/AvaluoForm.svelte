@@ -286,16 +286,30 @@
         <SpellInput id="fuel_type" list="sugg-fuel" bind:value={formData.fuel_type} placeholder="Diesel" class="uppercase" />
       </div>
       <div class="space-y-1.5">
-        <Label for="engine_size">Cilindraje <span class="text-muted-foreground font-normal">(litros)</span></Label>
+        <Label for="engine_size">Cilindrada</Label>
         <Input
           id="engine_size"
-          type="number"
-          min="0"
-          max="9.9"
-          step="0.1"
+          type="text"
+          maxlength="6"
           bind:value={formData.engine_size}
           placeholder="2.5"
-          title="Ingresá en litros (ej. 2.5). Si ingresás cc se convierte automáticamente."
+          spellcheck="false"
+          autocapitalize="characters"
+          class="uppercase"
+          title="Máximo 6 caracteres. Puede contener letras (ej. 2.5, 1500CC, 2.0T)."
+        />
+      </div>
+      <div class="space-y-1.5">
+        <Label for="origin">Origen</Label>
+        <Input
+          id="origin"
+          type="text"
+          maxlength="20"
+          bind:value={formData.origin}
+          placeholder="MEX/AGE"
+          spellcheck="false"
+          autocapitalize="characters"
+          class="uppercase"
         />
       </div>
       <div class="space-y-1.5 md:col-span-6">

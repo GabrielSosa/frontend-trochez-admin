@@ -35,13 +35,11 @@ export function cleanAvaluoFormData(formData) {
 
   cleanedData.model_year = Number(cleanedData.model_year) || null;
   cleanedData.mileage = Number(cleanedData.mileage) || 0;
-  // engine_size in the DB is NUMERIC(3,1) → max 99.9. If the user typed cc
-  // (e.g. 1500 / 2500) we convert to litres automatically so the insert
-  // doesn't 500 with "numeric field overflow".
+  // engine_size is free text (varchar(6)) — admite letras (ej. "2.5", "1500CC",
+  // "2.0T"). Sólo recortamos a 6 caracteres y normalizamos a mayúsculas.
   {
-    let es = Number(cleanedData.engine_size);
-    if (Number.isFinite(es) && es > 99) es = es / 1000;
-    cleanedData.engine_size = Number.isFinite(es) && es > 0 ? Math.round(es * 10) / 10 : null;
+    const es = (cleanedData.engine_size ?? '').toString().trim().slice(0, 6).toUpperCase();
+    cleanedData.engine_size = es || null;
   }
   cleanedData.appraisal_value_usd = Number(cleanedData.appraisal_value_usd) || 0;
   cleanedData.appraisal_value_trochez = Number(cleanedData.appraisal_value_trochez) || 0;
@@ -86,6 +84,7 @@ export function cleanAvaluoFormData(formData) {
     'vehicle_description',
     'color',
     'fuel_type',
+    'origin',
     'plate_number',
     'applicant',
     'owner',
@@ -118,7 +117,8 @@ export function mapApiDataToFormData(apiData) {
     color: apiData.color || '',
     mileage: apiData.mileage || 0,
     fuel_type: apiData.fuel_type || 'GAS',
-    engine_size: apiData.engine_size || 0,
+    engine_size: apiData.engine_size || '',
+    origin: apiData.origin || '',
     plate_number: apiData.plate_number || '',
     applicant: apiData.applicant || '',
     owner: apiData.owner || '',
@@ -160,7 +160,8 @@ export function getDefaultAvaluoFormData() {
     color: '',
     mileage: 0,
     fuel_type: 'GAS',
-    engine_size: 0,
+    engine_size: '',
+    origin: '',
     plate_number: '',
     applicant: '',
     owner: '',
