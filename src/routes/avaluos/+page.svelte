@@ -49,7 +49,8 @@
   let dense = $state(true);
 
   let filterBrand = $state('');
-  let filterColor = $state('');
+  let filterModel = $state('');
+  let filterYear = $state('');
   let filterFrom = $state('');
   let filterTo = $state('');
   let searchInput = $state('');
@@ -60,7 +61,8 @@
   $effect(() => {
     if (syncedOnce) return;
     filterBrand = s.filters.brand;
-    filterColor = s.filters.color;
+    filterModel = s.filters.model;
+    filterYear = s.filters.year;
     filterFrom = s.filters.from;
     filterTo = s.filters.to;
     searchInput = s.search;
@@ -154,7 +156,8 @@
     selected = new Set();
     store.setFilters({
       brand: filterBrand,
-      color: filterColor,
+      model: filterModel,
+      year: filterYear,
       from: filterFrom,
       to: filterTo
     });
@@ -162,17 +165,19 @@
 
   function clearFilters() {
     filterBrand = '';
-    filterColor = '';
+    filterModel = '';
+    filterYear = '';
     filterFrom = '';
     filterTo = '';
     selected = new Set();
-    store.setFilters({ brand: '', color: '', from: '', to: '' });
+    store.setFilters({ brand: '', model: '', year: '', from: '', to: '' });
   }
 
   async function refreshAll() {
     searchInput = '';
     filterBrand = '';
-    filterColor = '';
+    filterModel = '';
+    filterYear = '';
     filterFrom = '';
     filterTo = '';
     selected = new Set();
@@ -304,7 +309,7 @@
   let allSelected = $derived(s.items.length > 0 && selected.size === s.items.length);
   let someSelected = $derived(selected.size > 0 && selected.size < s.items.length);
   let activeFiltersCount = $derived(
-    [s.filters.brand, s.filters.color, s.filters.from, s.filters.to].filter(Boolean).length
+    [s.filters.brand, s.filters.model, s.filters.year, s.filters.from, s.filters.to].filter(Boolean).length
   );
 
   const columns = [
@@ -409,14 +414,18 @@
     </div>
 
     {#if showFilters}
-      <div class="mt-4 grid grid-cols-1 gap-3 border-t pt-4 md:grid-cols-4">
+      <div class="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 md:grid-cols-5">
         <div>
           <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-brand">Marca</label>
           <Input id="f-brand" bind:value={filterBrand} placeholder="Toyota…" />
         </div>
         <div>
-          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-color">Color</label>
-          <Input id="f-color" bind:value={filterColor} placeholder="Negro…" />
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-model">Modelo</label>
+          <Input id="f-model" bind:value={filterModel} placeholder="Corolla…" />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-year">Año</label>
+          <Input id="f-year" bind:value={filterYear} placeholder="2020" inputmode="numeric" maxlength="4" />
         </div>
         <div>
           <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-from">Desde</label>
@@ -426,7 +435,7 @@
           <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-to">Hasta</label>
           <Input id="f-to" bind:value={filterTo} type="date" />
         </div>
-        <div class="md:col-span-4 flex justify-end gap-2">
+        <div class="sm:col-span-2 md:col-span-5 flex justify-end gap-2">
           <Button variant="ghost" size="sm" onclick={clearFilters}>Limpiar</Button>
           <Button size="sm" onclick={applyFilters}>Aplicar filtros</Button>
         </div>
