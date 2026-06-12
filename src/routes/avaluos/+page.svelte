@@ -57,10 +57,16 @@
 
   const BASE_FUEL_TYPES = ['GASOLINA', 'DIESEL', 'HÍBRIDO', 'ELÉCTRICO', 'GAS NATURAL'];
 
+  function normalizeFuel(raw) {
+    const v = (raw ?? '').toUpperCase().trim();
+    if (!v) return '';
+    if (/H[IÍ]BRID/.test(v)) return 'HÍBRIDO';
+    if (/EL[EÉ]CTRIC|^ELE$/.test(v)) return 'ELÉCTRICO';
+    return v;
+  }
+
   let fuelOptions = $derived(() => {
-    const fromItems = s.items
-      .map(it => (it.fuel_type ?? '').toUpperCase().trim())
-      .filter(Boolean);
+    const fromItems = s.items.map(it => normalizeFuel(it.fuel_type)).filter(Boolean);
     const merged = new Set([...BASE_FUEL_TYPES, ...fromItems]);
     return [...merged].sort();
   });
