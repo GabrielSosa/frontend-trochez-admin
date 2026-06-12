@@ -8,7 +8,7 @@ const initialState = () => ({
   limit: 25,
   search: '',
   sort: { column: 'vehicle_appraisal_id', direction: 'desc' },
-  filters: { brand: '', model: '', year: '', from: '', to: '' },
+  filters: { brand: '', model: '', year: '', fuel: '' },
   loading: false,
   lastFetched: 0,
   error: null
@@ -28,8 +28,7 @@ function buildUrl() {
   if (state.filters.brand) params.set('brand', state.filters.brand);
   if (state.filters.model) params.set('model', state.filters.model);
   if (state.filters.year) params.set('year', state.filters.year);
-  if (state.filters.from) params.set('from', state.filters.from);
-  if (state.filters.to) params.set('to', state.filters.to);
+  if (state.filters.fuel) params.set('fuel', state.filters.fuel);
   return `${ApiUrls.AVALUOS.getAll}?${params.toString()}`;
 }
 

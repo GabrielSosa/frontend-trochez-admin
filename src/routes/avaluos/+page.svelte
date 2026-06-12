@@ -51,10 +51,19 @@
   let filterBrand = $state('');
   let filterModel = $state('');
   let filterYear = $state('');
-  let filterFrom = $state('');
-  let filterTo = $state('');
+  let filterFuel = $state('');
   let searchInput = $state('');
   let searchEl;
+
+  const BASE_FUEL_TYPES = ['GASOLINA', 'DIESEL', 'HÍBRIDO', 'ELÉCTRICO', 'GAS NATURAL'];
+
+  let fuelOptions = $derived(() => {
+    const fromItems = s.items
+      .map(it => (it.fuel_type ?? '').toUpperCase().trim())
+      .filter(Boolean);
+    const merged = new Set([...BASE_FUEL_TYPES, ...fromItems]);
+    return [...merged].sort();
+  });
 
   // Sync local filter inputs with the store (one-way: store -> inputs on initial load).
   let syncedOnce = false;
@@ -63,8 +72,7 @@
     filterBrand = s.filters.brand;
     filterModel = s.filters.model;
     filterYear = s.filters.year;
-    filterFrom = s.filters.from;
-    filterTo = s.filters.to;
+    filterFuel = s.filters.fuel;
     searchInput = s.search;
     syncedOnce = true;
   });
@@ -158,8 +166,7 @@
       brand: filterBrand,
       model: filterModel,
       year: filterYear,
-      from: filterFrom,
-      to: filterTo
+      fuel: filterFuel
     });
   }
 
@@ -167,10 +174,9 @@
     filterBrand = '';
     filterModel = '';
     filterYear = '';
-    filterFrom = '';
-    filterTo = '';
+    filterFuel = '';
     selected = new Set();
-    store.setFilters({ brand: '', model: '', year: '', from: '', to: '' });
+    store.setFilters({ brand: '', model: '', year: '', fuel: '' });
   }
 
   async function refreshAll() {
@@ -178,8 +184,7 @@
     filterBrand = '';
     filterModel = '';
     filterYear = '';
-    filterFrom = '';
-    filterTo = '';
+    filterFuel = '';
     selected = new Set();
     await store.reset();
     showSuccess('Datos actualizados');
@@ -309,7 +314,7 @@
   let allSelected = $derived(s.items.length > 0 && selected.size === s.items.length);
   let someSelected = $derived(selected.size > 0 && selected.size < s.items.length);
   let activeFiltersCount = $derived(
-    [s.filters.brand, s.filters.model, s.filters.year, s.filters.from, s.filters.to].filter(Boolean).length
+    [s.filters.brand, s.filters.model, s.filters.year, s.filters.fuel].filter(Boolean).length
   );
 
   const columns = [
@@ -414,7 +419,7 @@
     </div>
 
     {#if showFilters}
-      <div class="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 md:grid-cols-5">
+      <div class="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-brand">Marca</label>
           <Input id="f-brand" bind:value={filterBrand} placeholder="Toyota…" />
@@ -428,14 +433,19 @@
           <Input id="f-year" bind:value={filterYear} placeholder="2020" inputmode="numeric" maxlength="4" />
         </div>
         <div>
-          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-from">Desde</label>
-          <Input id="f-from" bind:value={filterFrom} type="date" />
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-fuel">Combustible</label>
+          <select
+            id="f-fuel"
+            bind:value={filterFuel}
+            class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          >
+            <option value="">Todos</option>
+            {#each fuelOptions() as opt}
+              <option value={opt}>{opt}</option>
+            {/each}
+          </select>
         </div>
-        <div>
-          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-to">Hasta</label>
-          <Input id="f-to" bind:value={filterTo} type="date" />
-        </div>
-        <div class="sm:col-span-2 md:col-span-5 flex justify-end gap-2">
+        <div class="sm:col-span-2 md:col-span-4 flex justify-end gap-2">
           <Button variant="ghost" size="sm" onclick={clearFilters}>Limpiar</Button>
           <Button size="sm" onclick={applyFilters}>Aplicar filtros</Button>
         </div>
