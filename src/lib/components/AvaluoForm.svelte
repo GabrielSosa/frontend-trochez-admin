@@ -35,6 +35,7 @@
     if (formData.apprasail_value_bank === undefined) formData.apprasail_value_bank = 0;
     if (formData.bank_value_in_dollars === undefined) formData.bank_value_in_dollars = 0;
     if (formData.discounts === undefined) formData.discounts = 0;
+    if (formData.extra_value === undefined) formData.extra_value = 0;
     if (formData.extras === undefined) formData.extras = '';
     if (formData.cert === undefined) formData.cert = '';
   });
@@ -50,7 +51,8 @@
       0,
       (Number(formData.appraisal_value_trochez) || 0) * 0.92 -
         totalDeductions -
-        (Number(formData.discounts) || 0)
+        (Number(formData.discounts) || 0) +
+        (Number(formData.extra_value) || 0)
     )
   );
 
@@ -59,7 +61,8 @@
       0,
       (Number(formData.apprasail_value_bank) || 0) -
         totalDeductions -
-        (Number(formData.discounts) || 0)
+        (Number(formData.discounts) || 0) +
+        (Number(formData.extra_value) || 0)
     )
   );
 
@@ -565,6 +568,17 @@
         min="0"
         step="0.01"
         bind:value={formData.discounts}
+        placeholder="0.00"
+      />
+    </div>
+    <div class="space-y-1.5">
+      <Label for="modal_extra_value">Valor extras</Label>
+      <Input
+        id="modal_extra_value"
+        type="number"
+        min="0"
+        step="0.01"
+        bind:value={formData.extra_value}
         placeholder="0.00"
       />
     </div>
