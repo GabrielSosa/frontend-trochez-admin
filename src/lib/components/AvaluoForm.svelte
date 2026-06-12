@@ -56,15 +56,17 @@
     )
   );
 
-  let apprasailValueLowerBank = $derived(
-    Math.max(
+  let apprasailValueLowerBank = $derived.by(() => {
+    const bank = Number(formData.apprasail_value_bank) || 0;
+    if (bank === 0) return 0;
+    return Math.max(
       0,
-      (Number(formData.apprasail_value_bank) || 0) -
+      bank -
         totalDeductions -
         (Number(formData.discounts) || 0) +
         (Number(formData.extra_value) || 0)
-    )
-  );
+    );
+  });
 
   function handleSubmit(e) {
     e.preventDefault();
