@@ -344,7 +344,7 @@
   <!-- Toolbar -->
   <Card class="p-4">
     <div class="flex flex-col gap-3">
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <div>
           <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-brand">Marca</label>
           <Input id="f-brand" bind:value={filterBrand} placeholder="Toyota…" oninput={debouncedApplyFilters} />
