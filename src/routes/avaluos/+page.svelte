@@ -13,7 +13,6 @@
   import {
     Plus,
     RefreshCw,
-    Search,
     Filter,
     Download,
     Trash2,
@@ -44,7 +43,6 @@
   let s = $derived(store.state);
 
   let selected = $state(new Set());
-  let showFilters = $state(false);
   let busyAction = $state(null); // {type:'cert'|'duplicate'|'delete', id}
   let dense = $state(true);
 
@@ -52,24 +50,6 @@
   let filterModel = $state('');
   let filterYear = $state('');
   let filterFuel = $state('');
-  let searchInput = $state('');
-  let searchEl;
-
-  const BASE_FUEL_TYPES = ['GASOLINA', 'DIESEL', 'HÍBRIDO', 'ELÉCTRICO', 'GAS NATURAL'];
-
-  function normalizeFuel(raw) {
-    const v = (raw ?? '').toUpperCase().trim();
-    if (!v) return '';
-    if (/H[IÍ]BRID/.test(v)) return 'HÍBRIDO';
-    if (/EL[EÉ]CTRIC|^ELE$/.test(v)) return 'ELÉCTRICO';
-    return v;
-  }
-
-  let fuelOptions = $derived(() => {
-    const fromItems = s.items.map(it => normalizeFuel(it.fuel_type)).filter(Boolean);
-    const merged = new Set([...BASE_FUEL_TYPES, ...fromItems]);
-    return [...merged].sort();
-  });
 
   // Sync local filter inputs with the store (one-way: store -> inputs on initial load).
   let syncedOnce = false;
@@ -79,7 +59,6 @@
     filterModel = s.filters.model;
     filterYear = s.filters.year;
     filterFuel = s.filters.fuel;
-    searchInput = s.search;
     syncedOnce = true;
   });
 
@@ -99,18 +78,6 @@
       // Ignore if user is typing in a field (except for some global keys).
       const tag = (e.target?.tagName ?? '').toLowerCase();
       const editing = ['input', 'textarea', 'select'].includes(tag) || e.target?.isContentEditable;
-      if (e.key === '/' && !editing) {
-        e.preventDefault();
-        searchEl?.focus();
-        searchEl?.select?.();
-        return;
-      }
-      if (e.key === 'Escape' && document.activeElement === searchEl) {
-        searchInput = '';
-        store.setSearch('');
-        searchEl?.blur();
-        return;
-      }
       if (editing) return;
       if (e.key === 'n' || e.key === 'N') {
         e.preventDefault();
@@ -150,23 +117,7 @@
     }
   });
 
-  const debouncedSearch = debounce((value) => {
-    selected = new Set();
-    store.setSearch(value);
-  }, 350);
-
-  function onSearchInput() {
-    debouncedSearch(searchInput);
-  }
-
-  function toggleSort(column) {
-    const same = s.sort.column === column;
-    const direction = same && s.sort.direction === 'asc' ? 'desc' : same ? 'asc' : 'desc';
-    selected = new Set();
-    store.setSort(column, direction);
-  }
-
-  function applyFilters() {
+  const debouncedApplyFilters = debounce(() => {
     selected = new Set();
     store.setFilters({
       brand: filterBrand,
@@ -174,6 +125,13 @@
       year: filterYear,
       fuel: filterFuel
     });
+  }, 400);
+
+  function toggleSort(column) {
+    const same = s.sort.column === column;
+    const direction = same && s.sort.direction === 'asc' ? 'desc' : same ? 'asc' : 'desc';
+    selected = new Set();
+    store.setSort(column, direction);
   }
 
   function clearFilters() {
@@ -186,7 +144,6 @@
   }
 
   async function refreshAll() {
-    searchInput = '';
     filterBrand = '';
     filterModel = '';
     filterYear = '';
@@ -376,87 +333,48 @@
 
   <!-- Toolbar -->
   <Card class="p-4">
-    <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <div class="relative w-full md:max-w-sm">
-        <Search size={16} class="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input
-          bind:this={searchEl}
-          bind:value={searchInput}
-          oninput={onSearchInput}
-          placeholder="Buscar… (presioná / para enfocar)"
-          spellcheck="false"
-          autocomplete="off"
-          class="flex h-9 w-full rounded-md border border-input bg-background pl-9 pr-9 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-        />
-        {#if searchInput}
-          <button
-            type="button"
-            class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-accent"
-            onclick={() => {
-              searchInput = '';
-              store.setSearch('');
-            }}
-            aria-label="Limpiar"
-          >
-            <X size={14} />
-          </button>
-        {/if}
+    <div class="flex flex-col gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-brand">Marca</label>
+          <Input id="f-brand" bind:value={filterBrand} placeholder="Toyota…" oninput={debouncedApplyFilters} />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-model">Modelo</label>
+          <Input id="f-model" bind:value={filterModel} placeholder="Corolla…" oninput={debouncedApplyFilters} />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-year">Año</label>
+          <Input id="f-year" bind:value={filterYear} placeholder="2020" inputmode="numeric" maxlength="4" oninput={debouncedApplyFilters} />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-fuel">Combustible</label>
+          <Input id="f-fuel" bind:value={filterFuel} placeholder="Diesel, gasolina…" oninput={debouncedApplyFilters} />
+        </div>
       </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onclick={() => (dense = !dense)}
-          title={dense ? 'Cambiar a vista cómoda' : 'Cambiar a vista compacta'}
-        >
-          {dense ? 'Cómodo' : 'Compacto'}
-        </Button>
-        <Button variant="outline" size="sm" onclick={() => (showFilters = !showFilters)}>
-          <Filter size={14} />
-          Filtros
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" onclick={clearFilters} disabled={!activeFiltersCount}>
+          <X size={14} />
+          Limpiar filtros
           {#if activeFiltersCount}
             <Badge class="ml-1 h-5 px-1.5 text-[10px]">{activeFiltersCount}</Badge>
           {/if}
         </Button>
-        <Button variant="outline" size="sm" onclick={() => exportCSV('page')}>
-          <Download size={14} /> Exportar CSV
-        </Button>
+        <div class="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onclick={() => (dense = !dense)}
+            title={dense ? 'Cambiar a vista cómoda' : 'Cambiar a vista compacta'}
+          >
+            {dense ? 'Cómodo' : 'Compacto'}
+          </Button>
+          <Button variant="outline" size="sm" onclick={() => exportCSV('page')}>
+            <Download size={14} /> Exportar CSV
+          </Button>
+        </div>
       </div>
     </div>
-
-    {#if showFilters}
-      <div class="mt-4 grid grid-cols-1 gap-3 border-t pt-4 sm:grid-cols-2 md:grid-cols-4">
-        <div>
-          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-brand">Marca</label>
-          <Input id="f-brand" bind:value={filterBrand} placeholder="Toyota…" />
-        </div>
-        <div>
-          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-model">Modelo</label>
-          <Input id="f-model" bind:value={filterModel} placeholder="Corolla…" />
-        </div>
-        <div>
-          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-year">Año</label>
-          <Input id="f-year" bind:value={filterYear} placeholder="2020" inputmode="numeric" maxlength="4" />
-        </div>
-        <div>
-          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-fuel">Combustible</label>
-          <select
-            id="f-fuel"
-            bind:value={filterFuel}
-            class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
-          >
-            <option value="">Todos</option>
-            {#each fuelOptions() as opt}
-              <option value={opt}>{opt}</option>
-            {/each}
-          </select>
-        </div>
-        <div class="sm:col-span-2 md:col-span-4 flex justify-end gap-2">
-          <Button variant="ghost" size="sm" onclick={clearFilters}>Limpiar</Button>
-          <Button size="sm" onclick={applyFilters}>Aplicar filtros</Button>
-        </div>
-      </div>
-    {/if}
   </Card>
 
   <!-- Bulk action bar -->
@@ -545,13 +463,13 @@
                   <Filter size={32} class="opacity-30" />
                   <p class="font-medium text-foreground">Sin avalúos</p>
                   <p class="text-sm">
-                    {#if s.search || activeFiltersCount}
+                    {#if activeFiltersCount}
                       No hay resultados con los criterios actuales.
                     {:else}
                       Aún no se han creado avalúos.
                     {/if}
                   </p>
-                  {#if s.search || activeFiltersCount}
+                  {#if activeFiltersCount}
                     <Button size="sm" variant="outline" onclick={clearFilters}>Limpiar filtros</Button>
                   {/if}
                 </div>
@@ -722,7 +640,6 @@
 
   <!-- Subtle keyboard hints (estilo Lotus power-user) -->
   <p class="hidden md:flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground/80">
-    <span class="inline-flex items-center gap-1"><kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">/</kbd> buscar</span>
     <span class="inline-flex items-center gap-1"><kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">N</kbd> nuevo</span>
     <span class="inline-flex items-center gap-1"><kbd class="rounded border px-1 py-0.5 text-[10px] bg-muted/50">R</kbd> actualizar</span>
     <span class="inline-flex items-center gap-1">
