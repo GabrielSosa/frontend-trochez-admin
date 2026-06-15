@@ -50,6 +50,8 @@
   let filterModel = $state('');
   let filterYear = $state('');
   let filterFuel = $state('');
+  let filterEngine = $state('');
+  let filterPlate = $state('');
 
   // Sync local filter inputs with the store (one-way: store -> inputs on initial load).
   let syncedOnce = false;
@@ -59,6 +61,8 @@
     filterModel = s.filters.model;
     filterYear = s.filters.year;
     filterFuel = s.filters.fuel;
+    filterEngine = s.filters.engine;
+    filterPlate = s.filters.plate;
     syncedOnce = true;
   });
 
@@ -123,7 +127,9 @@
       brand: filterBrand,
       model: filterModel,
       year: filterYear,
-      fuel: filterFuel
+      fuel: filterFuel,
+      engine: filterEngine,
+      plate: filterPlate
     });
   }, 400);
 
@@ -139,8 +145,10 @@
     filterModel = '';
     filterYear = '';
     filterFuel = '';
+    filterEngine = '';
+    filterPlate = '';
     selected = new Set();
-    store.setFilters({ brand: '', model: '', year: '', fuel: '' });
+    store.setFilters({ brand: '', model: '', year: '', fuel: '', engine: '', plate: '' });
   }
 
   async function refreshAll() {
@@ -148,6 +156,8 @@
     filterModel = '';
     filterYear = '';
     filterFuel = '';
+    filterEngine = '';
+    filterPlate = '';
     selected = new Set();
     await store.reset();
     showSuccess('Datos actualizados');
@@ -277,7 +287,7 @@
   let allSelected = $derived(s.items.length > 0 && selected.size === s.items.length);
   let someSelected = $derived(selected.size > 0 && selected.size < s.items.length);
   let activeFiltersCount = $derived(
-    [s.filters.brand, s.filters.model, s.filters.year, s.filters.fuel].filter(Boolean).length
+    [s.filters.brand, s.filters.model, s.filters.year, s.filters.fuel, s.filters.engine, s.filters.plate].filter(Boolean).length
   );
 
   const columns = [
@@ -334,7 +344,7 @@
   <!-- Toolbar -->
   <Card class="p-4">
     <div class="flex flex-col gap-3">
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
         <div>
           <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-brand">Marca</label>
           <Input id="f-brand" bind:value={filterBrand} placeholder="Toyota…" oninput={debouncedApplyFilters} />
@@ -350,6 +360,14 @@
         <div>
           <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-fuel">Combustible</label>
           <Input id="f-fuel" bind:value={filterFuel} placeholder="Diesel, gasolina…" oninput={debouncedApplyFilters} />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-engine">Motor</label>
+          <Input id="f-engine" bind:value={filterEngine} placeholder="2.0, 1.5…" oninput={debouncedApplyFilters} />
+        </div>
+        <div>
+          <label class="mb-1 block text-xs font-medium text-muted-foreground" for="f-plate">Placa</label>
+          <Input id="f-plate" bind:value={filterPlate} placeholder="ABC-123…" oninput={debouncedApplyFilters} />
         </div>
       </div>
       <div class="flex flex-wrap items-center justify-between gap-2">
